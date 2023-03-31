@@ -28,6 +28,8 @@ import org.apache.hadoop.ozone.om.request.OMClientRequestUtils;
 import org.apache.hadoop.ozone.om.request.file.OMFileRequest;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -47,6 +49,9 @@ public class OMKeyRenameResponseWithFSO extends OMKeyRenameResponse {
   private OmKeyInfo fromKeyParent;
   private OmKeyInfo toKeyParent;
   private OmBucketInfo bucketInfo;
+
+  private static final Logger LOG =
+          LoggerFactory.getLogger(OMKeyRenameResponseWithFSO.class);
 
   @SuppressWarnings("checkstyle:ParameterNumber")
   public OMKeyRenameResponseWithFSO(@Nonnull OMResponse omResponse,
@@ -86,11 +91,33 @@ public class OMKeyRenameResponseWithFSO extends OMKeyRenameResponse {
       omMetadataManager.getDirectoryTable().putWithBatch(batchOperation,
               getToKeyName(), renameDirInfo);
 
+      LOG.info("[Inconsistent_Key_Issue] OMKeyRenameResponseWithFSODir " +
+                      "dbFileKey:{}, " + "dirName:{}, "
+                      + "keyName:{}, " + "fileName{}, " +
+              "modificationTime:{}.",
+              getToKeyName(), renameDirInfo.getName(),
+              getRenameKeyInfo().getKeyName(), getRenameKeyInfo().getFileName(),
+              getRenameKeyInfo().getModificationTime());
+
     } else {
       omMetadataManager.getKeyTable(getBucketLayout())
           .deleteWithBatch(batchOperation, getFromKeyName());
       omMetadataManager.getKeyTable(getBucketLayout())
           .putWithBatch(batchOperation, getToKeyName(), getRenameKeyInfo());
+
+      LOG.info("[Inconsistent_Key_Issue] OMKeyRenameResponseWithFSO " +
+                      "dbFileKey:{}, " + "keyName:{}, " + "fileName:{}, " +
+                      "modificationTime:{}.",
+              getToKeyName(),getRenameKeyInfo().getKeyName(),
+              getRenameKeyInfo().getFileName(), getRenameKeyInfo().getModificationTime());
+
+      if (getRenameKeyInfo().getKeyName().contains("/")) {
+        LOG.info("[Inconsistent_Key_Issue_Error] OMKeyRenameResponseWithFSO " +
+                        "dbFileKey:{}, " + "keyName:{}, " + "fileName:{}, " +
+                        "modificationTime:{}.",
+                getToKeyName(),getRenameKeyInfo().getKeyName(),
+                getRenameKeyInfo().getFileName(), getRenameKeyInfo().getModificationTime());
+      }
 
       boolean isSnapshotBucket = OMClientRequestUtils.
           isSnapshotBucket(omMetadataManager, getRenameKeyInfo());
@@ -138,5 +165,11 @@ public class OMKeyRenameResponseWithFSO extends OMKeyRenameResponse {
         OMFileRequest.getDirectoryInfo(keyInfo);
     metadataManager.getDirectoryTable().putWithBatch(batch,
         dbKey, keyDirInfo);
+
+    LOG.info("[Inconsistent_Key_Issue] OMKeyRenameResponseWithFSODir " +
+                    "dbFileKey:{}, " + "dirName:{}, " +
+                    "keyName:{}, " + "fileName:{}.",
+            dbKey, keyDirInfo.getName(),
+            keyInfo.getKeyName(), keyInfo.getFileName());
   }
 }

@@ -228,6 +228,21 @@ public class OMFileCreateRequestWithFSO extends OMFileCreateRequest {
               omFileInfo, missingParentInfos, clientID,
               omBucketInfo.copyObject(), volumeId);
 
+      LOG.info("[Inconsistent_Key_Issue] OMFileCreateRequestWithFSO " +
+                      "keyName:{}, " + "fileName:{}, " +
+                      "modificationTime:{}.",
+              omFileInfo.getKeyName(), omFileInfo.getFileName(),
+              omFileInfo.getModificationTime());
+
+      if (omFileInfo.getKeyName().contains("/")) {
+        LOG.info("[Inconsistent_Key_Issue_Error] OMFileCreateRequestWithFSO " +
+                        "keyName:{}, " + "fileName:{}, " +
+                        "modificationTime:{}.",
+                omFileInfo.getKeyName(),
+                omFileInfo.getFileName(),
+                omFileInfo.getModificationTime());
+      }
+
       result = Result.SUCCESS;
     } catch (IOException ex) {
       result = Result.FAILURE;
@@ -253,7 +268,7 @@ public class OMFileCreateRequestWithFSO extends OMFileCreateRequest {
     switch (result) {
     case SUCCESS:
       omMetrics.incNumKeys(numKeysCreated);
-      LOG.debug("File created. Volume:{}, Bucket:{}, Key:{}", volumeName,
+      LOG.info("File created. Volume:{}, Bucket:{}, Key:{}", volumeName,
           bucketName, keyName);
       break;
     case FAILURE:

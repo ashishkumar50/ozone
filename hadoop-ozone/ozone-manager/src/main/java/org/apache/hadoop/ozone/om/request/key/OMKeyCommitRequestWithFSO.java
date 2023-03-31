@@ -228,6 +228,23 @@ public class OMKeyCommitRequestWithFSO extends OMKeyCommitRequest {
               oldKeyVersionsToDelete, volumeId, isHSync);
 
       result = Result.SUCCESS;
+
+      LOG.info("[Inconsistent_Key_Issue] OMKeyCommitRequestWithFSO " +
+                      "dbFileKey:{}, " + "keyName:{}, " + "fileName:{}, " +
+              "modificationTime:{}.",
+              dbFileKey, omKeyInfo.getKeyName(),
+              omKeyInfo.getFileName(), omKeyInfo.getModificationTime());
+
+      if (omKeyInfo.getKeyName().contains("/")) {
+        LOG.info("[Inconsistent_Key_Issue_Error] OMKeyCommitRequestWithFSO " +
+                        "dbFileKey:{}, " + "keyName:{}, " + "fileName:{}, " +
+                        "modificationTime:{}.",
+                dbFileKey,
+                omKeyInfo.getKeyName(),
+                omKeyInfo.getFileName(),
+                omKeyInfo.getModificationTime());
+      }
+
     } catch (IOException ex) {
       result = Result.FAILURE;
       exception = ex;

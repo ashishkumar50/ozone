@@ -547,6 +547,20 @@ public final class OMFileRequest {
 
     omMetadataMgr.getOpenKeyTable(BucketLayout.FILE_SYSTEM_OPTIMIZED)
         .putWithBatch(batchOp, dbOpenFileKey, omFileInfo);
+
+    LOG.info("[Inconsistent_Key_Issue] addToOpenFileTable dbFileKey:{}, " +
+                    "keyName:{}, " + "fileName:{}, " +
+                    "modificationTime:{}.",
+            dbOpenFileKey, omFileInfo.getKeyName(), omFileInfo.getFileName(),
+            omFileInfo.getModificationTime());
+
+    if (omFileInfo.getKeyName().contains("/")) {
+      LOG.info("[Inconsistent_Key_Issue] addToOpenFileTable dbFileKey:{}, " +
+                      "keyName:{}, " + "fileName:{}, " +
+                      "modificationTime:{}.",
+              dbOpenFileKey, omFileInfo.getKeyName(), omFileInfo.getFileName(),
+              omFileInfo.getModificationTime());
+    }
   }
 
   /**
@@ -592,6 +606,22 @@ public final class OMFileRequest {
 
     omMetadataMgr.getKeyTable(BucketLayout.FILE_SYSTEM_OPTIMIZED)
         .putWithBatch(batchOp, dbFileKey, omFileInfo);
+
+    LOG.info("[Inconsistent_Key_Issue] addToFileTable dbFileKey:{}, " +
+                    "keyName:{}, " + "fileName:{}, " +
+            "modificationTime:{}.",
+            dbFileKey,omFileInfo.getKeyName(),omFileInfo.getFileName(),
+            omFileInfo.getModificationTime());
+
+    if (omFileInfo.getKeyName().contains("/")) {
+      LOG.info("[Inconsistent_Key_Issue] addToFileTable dbFileKey:{}, " +
+                      "keyName:{}, " + "fileName:{}, " +
+                      "modificationTime:{}.",
+              dbFileKey,omFileInfo.getKeyName(),omFileInfo.getFileName(),
+              omFileInfo.getModificationTime());
+
+    }
+
     return dbFileKey;
   }
 

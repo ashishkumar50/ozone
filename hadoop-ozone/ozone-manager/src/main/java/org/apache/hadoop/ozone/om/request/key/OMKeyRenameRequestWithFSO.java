@@ -225,7 +225,7 @@ public class OMKeyRenameRequestWithFSO extends OMKeyRenameRequest {
 
     switch (result) {
     case SUCCESS:
-      LOG.debug("Rename Key is successfully completed for volume:{} bucket:{}" +
+      LOG.info("Rename Key is successfully completed for volume:{} bucket:{}" +
                       " fromKey:{} toKey:{}. ", volumeName, bucketName,
               fromKeyName, toKeyName);
       break;
@@ -314,6 +314,25 @@ public class OMKeyRenameRequestWithFSO extends OMKeyRenameRequest {
         omResponse.setRenameKeyResponse(RenameKeyResponse.newBuilder()).build(),
         dbFromKey, dbToKey, fromKeyParent, toKeyParent, fromKeyValue,
         omBucketInfo, isRenameDirectory, getBucketLayout());
+
+    LOG.info("[Inconsistent_Key_Issue] OMKeyRenameRequestWithFSO " +
+                    "dbFromKey:{}, " + "dbToKey:{}, " + "keyName:{}, " +
+                    "fileName:{}, " + "modificationTime:{}.",
+            dbFromKey,dbToKey,
+            fromKeyValue.getKeyName(),
+            fromKeyValue.getFileName(),
+            fromKeyValue.getModificationTime());
+
+    if (fromKeyValue.getKeyName().contains("/")) {
+      LOG.info("[Inconsistent_Key_Issue_Error] OMKeyRenameRequestWithFSO " +
+                      "dbFromKey:{}, " + "dbToKey:{}, " + "keyName:{}, " +
+              "fileName:{}, " + "modificationTime:{}.",
+              dbFromKey,dbToKey,
+              fromKeyValue.getKeyName(),
+              fromKeyValue.getFileName(),
+              fromKeyValue.getModificationTime());
+    }
+
     return omClientResponse;
   }
   @SuppressWarnings("checkstyle:ParameterNumber")
