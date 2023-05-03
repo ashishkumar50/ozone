@@ -527,12 +527,6 @@ public class TestDeleteContainerHandler {
     // get containerID of the key
     ContainerID containerId = getContainerID(keyName);
 
-    ContainerInfo container = cluster.getStorageContainerManager()
-        .getContainerManager().getContainer(containerId);
-
-    Pipeline pipeline = cluster.getStorageContainerManager()
-        .getPipelineManager().getPipeline(container.getPipelineID());
-
     // We need to close the container because delete container only happens
     // on closed containers when force flag is set to false.
 
