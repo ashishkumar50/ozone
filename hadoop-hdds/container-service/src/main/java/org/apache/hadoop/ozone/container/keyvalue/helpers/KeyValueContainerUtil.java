@@ -411,7 +411,7 @@ public final class KeyValueContainerUtil {
     }
     try (BlockIterator<BlockData> blockIterator =
              store.getBlockIterator(container.getContainerID())) {
-      return blockIterator.hasNext();
+      return !blockIterator.hasNext();
     }
   }
 

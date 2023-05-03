@@ -44,7 +44,7 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
   private final long bytesUsed;
   private final boolean isEmpty;
 
-
+  @SuppressWarnings("parameternumber")
   private ContainerReplica(
       final ContainerID containerID,
       final ContainerReplicaProto.State state,
