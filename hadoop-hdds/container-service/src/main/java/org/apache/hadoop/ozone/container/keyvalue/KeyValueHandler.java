@@ -1299,7 +1299,6 @@ public class KeyValueHandler extends Handler {
         // container is being forcefully deleted (which happens when
         // container is unhealthy or over-replicated).
         if (!container.getContainerData().isEmpty()) {
-        // if (container.getContainerData().getBlockCount() != 0) {
           metrics.incContainerDeleteFailedBlockCountNotZero();
           LOG.error("Received container deletion command for container {} but" +
                   " the container is not empty with blockCount {}",

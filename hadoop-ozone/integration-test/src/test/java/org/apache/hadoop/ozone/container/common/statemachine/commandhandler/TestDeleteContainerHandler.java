@@ -187,7 +187,7 @@ public class TestDeleteContainerHandler {
     objectStore.getVolume(volumeName)
         .getBucket(bucketName).deleteKey(keyName);
 
-    // Ensure isEmpty flag is true when key is deleted
+    // Ensure isEmpty flag is true when key is deleted and container is empty
     GenericTestUtils.waitFor(() -> getContainerfromDN(
         hddsDatanodeService, containerId.getId())
         .getContainerData().isEmpty(),
@@ -321,10 +321,7 @@ public class TestDeleteContainerHandler {
     Assert.assertFalse(isContainerDeleted(hddsDatanodeService,
         containerId.getId()));
 
-    // Set container blockCount to 0 to mock that it is empty as per RocksDB
-    getContainerfromDN(hddsDatanodeService, containerId.getId())
-        .getContainerData().setBlockCount(0);
-
+    // Set container as empty to mock it is empty
     getContainerfromDN(hddsDatanodeService, containerId.getId())
         .getContainerData().markAsEmpty();
 
@@ -404,10 +401,6 @@ public class TestDeleteContainerHandler {
   @Test(timeout = 60000)
   public void testContainerDeleteWithInvalidBlockCount()
       throws Exception {
-    // 1. Test if a non force deletion fails if chunks are still present with
-    //    block count set to 0
-    // 2. Test if a force deletion passes even if chunks are still present
-    //the easiest way to create an open container is creating a key
     String keyName = UUID.randomUUID().toString();
     // create key
     createKey(keyName);
@@ -420,7 +413,6 @@ public class TestDeleteContainerHandler {
 
     // We need to close the container because delete container only happens
     // on closed containers when force flag is set to false.
-
     HddsDatanodeService hddsDatanodeService =
         cluster.getHddsDatanodes().get(0);
 
@@ -428,7 +420,6 @@ public class TestDeleteContainerHandler {
         containerId.getId()));
 
     DatanodeDetails datanodeDetails = hddsDatanodeService.getDatanodeDetails();
-
     NodeManager nodeManager =
         cluster.getStorageContainerManager().getScmNodeManager();
     //send the order to close the container
@@ -458,7 +449,7 @@ public class TestDeleteContainerHandler {
     getContainerfromDN(hddsDatanodeService, containerId.getId())
         .getContainerData().markAsEmpty();
 
-    // Now empty the container Dir and try with invalid block count
+    // Now empty the container Dir
     Container containerToDelete = getContainerfromDN(
         hddsDatanodeService, containerId.getId());
     File chunkDir = new File(containerToDelete.
@@ -474,7 +465,7 @@ public class TestDeleteContainerHandler {
     command = new DeleteContainerCommand(containerId.getId(), false);
 
     // Send the delete command. It should succeed as even though blockCount
-    // is non-zero.
+    // is non-zero(Invalid).
     command.setTerm(
         cluster.getStorageContainerManager().getScmContext().getTermOfLeader());
     nodeManager.addDatanodeCommand(datanodeDetails.getUuid(), command);
