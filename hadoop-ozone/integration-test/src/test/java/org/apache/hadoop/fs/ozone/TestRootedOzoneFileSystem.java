@@ -1718,7 +1718,6 @@ public class TestRootedOzoneFileSystem {
     String dirStr1 = "dir1";
     Path dirPath1 = new Path(bucketPath1, dirStr1);
     fs.mkdirs(dirPath1);
-    FileStatus dir1Status = fs.getFileStatus(dirPath1);
 
     // Create volume with link to first
     String linkVolume = getRandomNonExistVolumeName();
