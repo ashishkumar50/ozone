@@ -135,8 +135,8 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
                 OZONE_DATANODE_CHECK_EMPTY_CONTAINER_ON_DISK_ON_DELETE_DEFAULT);
   }
   @VisibleForTesting
-  public void setCheckChunksFilePath(boolean bCheckChunksFilePath) {
-    this.bCheckChunksFilePath = bCheckChunksFilePath;
+  public void setCheckChunksFilePath(boolean bCheckChunksDirFilePath) {
+    this.bCheckChunksFilePath = bCheckChunksDirFilePath;
   }
 
   @Override

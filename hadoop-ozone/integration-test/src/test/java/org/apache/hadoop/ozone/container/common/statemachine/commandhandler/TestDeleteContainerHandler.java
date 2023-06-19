@@ -294,9 +294,6 @@ public class TestDeleteContainerHandler {
     OzoneTestUtils.closeAllContainers(cluster.getStorageContainerManager()
         .getEventQueue(), cluster.getStorageContainerManager());
 
-    ContainerMetrics metrics =
-        hddsDatanodeService
-            .getDatanodeStateMachine().getContainer().getMetrics();
     GenericTestUtils.waitFor(() ->
             isContainerClosed(hddsDatanodeService, containerId.getId()),
         500, 5 * 1000);
