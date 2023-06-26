@@ -147,6 +147,7 @@ public class DeleteKeyHandler extends KeyHandler {
     } catch (IOException e) {
       return false;
     }
+    
     return (keyDetails != null);
   }
 }
