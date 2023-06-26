@@ -170,7 +170,7 @@ Test key handling
     ${result} =     Execute             ozone sh key list ${protocol}${server}/${volume}/bb1 | jq -r '.[] | select(.name=="key1") | .name'
                     Should Be Equal     ${result}       key1
                     Execute             ozone sh key rename ${protocol}${server}/${volume}/bb1 key1 key2
-    ${result} =     Execute             ozone sh key list ${protocol}${server}/${volume}/bb1 | jq -r '.[].name'
+    ${result} =     Execute             ozone sh key list ${protocol}${server}/${volume}/bb1 | jq -r '.[] | select(.name=="key2") | .name'
                     Should Be Equal     ${result}       key2
                     Execute             ozone sh key delete ${protocol}${server}/${volume}/bb1/key2
 
