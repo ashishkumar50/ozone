@@ -245,13 +245,13 @@ Test native authorizer
     Execute         kdestroy
     Run Keyword     Kinit test user     testuser    testuser.keytab
 
-Test Delete key
+Test Delete key with Trash
     [arguments]    ${protocol}         ${server}       ${volume}
                    Execute               ozone sh volume create ${protocol}${server}/${volume}
                    Execute               ozone sh bucket create ${protocol}${server}/${volume}/bfso --layout FILE_SYSTEM_OPTIMIZED
                    Execute               ozone sh key put -t RATIS ${protocol}${server}/${volume}/bfso/key3 /opt/hadoop/NOTICE.txt
                    Execute               ozone sh key delete ${protocol}${server}/${volume}/bfso/key3
-    ${result} =    Execute               ozone sh key list ${protocol}${server}/${volume}/bfso
+    ${result} =    Execute               ozone sh key list ${protocol}${server}/${volume}/bfso | jq -r '.[] | select(.name | startswith(".Trash")) | .name'
                    Should Contain Any    ${result}     .Trash/hadoop    .Trash/testuser    .Trash/root
                    Should contain        ${result}     key3
                    Execute               ozone sh bucket create ${protocol}${server}/${volume}/obsbkt --layout OBJECT_STORE

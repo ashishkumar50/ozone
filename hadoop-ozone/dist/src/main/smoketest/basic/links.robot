@@ -115,7 +115,7 @@ Key list passthrough
 
 Key delete passthrough
                         Execute                     ozone sh key delete ${target}/link1/key2
-    ${source_list} =    Execute                     ozone sh key list ${source}/bucket1 | jq -r '.[].name'
+    ${source_list} =    Execute                     ozone sh key list ${source}/bucket1 | jq -r '.[] | select(.name | startswith(".Trash")) | .name'
                         Should Contain Any          ${source_list}     .Trash/hadoop    .Trash/testuser    .Trash/root
                         Should contain              ${source_list}     key2
 
