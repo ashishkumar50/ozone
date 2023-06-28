@@ -45,6 +45,7 @@ import org.slf4j.Logger;
 import java.net.InetAddress;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.hdds.server.ServerUtils.getRemoteUserName;
 import static org.apache.hadoop.hdds.utils.HddsServerUtil.getRemoteUser;
@@ -78,12 +79,13 @@ public class OmMetadataReader implements IOmMetadataReader, Auditor {
   private final BucketManager bucketManager;
   private final OzoneManager ozoneManager;
   private final boolean isAclEnabled;
-  private final IAccessAuthorizer accessAuthorizer;
+  private static IAccessAuthorizer accessAuthorizer;
   private final boolean isNativeAuthorizerEnabled;
   private final OmMetadataReaderMetrics metrics;
   private final Logger log;
   private final AuditLogger audit;
   private final OMPerformanceMetrics perfMetrics;
+  private static AtomicBoolean bInitialized = new AtomicBoolean(false);
 
   public OmMetadataReader(KeyManager keyManager,
                           PrefixManager prefixManager,
@@ -104,20 +106,31 @@ public class OmMetadataReader implements IOmMetadataReader, Auditor {
     this.metrics = omMetadataReaderMetrics;
     this.perfMetrics = ozoneManager.getPerfMetrics();
     if (isAclEnabled) {
-      accessAuthorizer = getACLAuthorizerInstance(configuration);
-      if (accessAuthorizer instanceof OzoneNativeAuthorizer) {
-        OzoneNativeAuthorizer authorizer =
-            (OzoneNativeAuthorizer) accessAuthorizer;
-        isNativeAuthorizerEnabled = true;
-        authorizer.setVolumeManager(volumeManager);
-        authorizer.setBucketManager(bucketManager);
-        authorizer.setKeyManager(keyManager);
-        authorizer.setPrefixManager(prefixManager);
-        authorizer.setAdminCheck(ozoneManager::isAdmin);
-        authorizer.setReadOnlyAdminCheck(ozoneManager::isReadOnlyAdmin);
-        authorizer.setAllowListAllVolumes(allowListAllVolumes);
+      if (bInitialized.get()) {
+        // accessAuthorizer already initialized by ozonemanager
+        accessAuthorizer = ozoneManager.getAccessAuthorizer();
+        if (accessAuthorizer instanceof OzoneNativeAuthorizer) {
+          isNativeAuthorizerEnabled = true;
+        } else {
+          isNativeAuthorizerEnabled = false;
+        }
       } else {
-        isNativeAuthorizerEnabled = false;
+        accessAuthorizer = getACLAuthorizerInstance(configuration);
+        bInitialized.set(true);
+        if (accessAuthorizer instanceof OzoneNativeAuthorizer) {
+          OzoneNativeAuthorizer authorizer =
+              (OzoneNativeAuthorizer) accessAuthorizer;
+          isNativeAuthorizerEnabled = true;
+          authorizer.setVolumeManager(volumeManager);
+          authorizer.setBucketManager(bucketManager);
+          authorizer.setKeyManager(keyManager);
+          authorizer.setPrefixManager(prefixManager);
+          authorizer.setAdminCheck(ozoneManager::isAdmin);
+          authorizer.setReadOnlyAdminCheck(ozoneManager::isReadOnlyAdmin);
+          authorizer.setAllowListAllVolumes(allowListAllVolumes);
+        } else {
+          isNativeAuthorizerEnabled = false;
+        }
       }
     } else {
       accessAuthorizer = null;
