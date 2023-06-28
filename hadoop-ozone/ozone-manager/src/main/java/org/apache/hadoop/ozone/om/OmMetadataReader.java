@@ -106,7 +106,7 @@ public class OmMetadataReader implements IOmMetadataReader, Auditor {
     this.metrics = omMetadataReaderMetrics;
     this.perfMetrics = ozoneManager.getPerfMetrics();
     if (isAclEnabled) {
-      if (bInitialized.get()) {
+      if (bInitialized.get() && ozoneManager.getOmMetadataReader() != null) {
         // accessAuthorizer already initialized by ozonemanager
         accessAuthorizer = ozoneManager.getAccessAuthorizer();
         if (accessAuthorizer instanceof OzoneNativeAuthorizer) {
