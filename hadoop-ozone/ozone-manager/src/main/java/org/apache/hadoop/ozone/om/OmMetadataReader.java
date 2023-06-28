@@ -45,7 +45,6 @@ import org.slf4j.Logger;
 import java.net.InetAddress;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.hdds.server.ServerUtils.getRemoteUserName;
 import static org.apache.hadoop.hdds.utils.HddsServerUtil.getRemoteUser;
@@ -85,7 +84,6 @@ public class OmMetadataReader implements IOmMetadataReader, Auditor {
   private final Logger log;
   private final AuditLogger audit;
   private final OMPerformanceMetrics perfMetrics;
-  private static AtomicBoolean bInitialized = new AtomicBoolean(false);
 
   public OmMetadataReader(KeyManager keyManager,
                           PrefixManager prefixManager,
@@ -106,7 +104,7 @@ public class OmMetadataReader implements IOmMetadataReader, Auditor {
     this.metrics = omMetadataReaderMetrics;
     this.perfMetrics = ozoneManager.getPerfMetrics();
     if (isAclEnabled) {
-      if (bInitialized.get() && ozoneManager.getOmMetadataReader() != null) {
+      if (ozoneManager.getOmMetadataReader() != null) {
         // accessAuthorizer already initialized by ozonemanager
         accessAuthorizer = ozoneManager.getAccessAuthorizer();
         if (accessAuthorizer instanceof OzoneNativeAuthorizer) {
@@ -116,7 +114,6 @@ public class OmMetadataReader implements IOmMetadataReader, Auditor {
         }
       } else {
         accessAuthorizer = getACLAuthorizerInstance(configuration);
-        bInitialized.set(true);
         if (accessAuthorizer instanceof OzoneNativeAuthorizer) {
           OzoneNativeAuthorizer authorizer =
               (OzoneNativeAuthorizer) accessAuthorizer;
