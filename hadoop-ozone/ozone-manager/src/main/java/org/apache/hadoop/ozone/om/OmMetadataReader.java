@@ -79,7 +79,7 @@ public class OmMetadataReader implements IOmMetadataReader, Auditor {
   private final BucketManager bucketManager;
   private final OzoneManager ozoneManager;
   private final boolean isAclEnabled;
-  private static IAccessAuthorizer accessAuthorizer;
+  private final IAccessAuthorizer accessAuthorizer;
   private final boolean isNativeAuthorizerEnabled;
   private final OmMetadataReaderMetrics metrics;
   private final Logger log;
