@@ -90,7 +90,8 @@ public class OmMetadataReader implements IOmMetadataReader, Auditor {
                           OzoneManager ozoneManager,
                           Logger log,
                           AuditLogger audit,
-                          OmMetadataReaderMetrics omMetadataReaderMetrics) {
+                          OmMetadataReaderMetrics omMetadataReaderMetrics,
+                          boolean bNeedAccessAuthInitialization) {
     this.keyManager = keyManager;
     this.bucketManager = ozoneManager.getBucketManager();
     this.volumeManager = ozoneManager.getVolumeManager();
@@ -104,13 +105,13 @@ public class OmMetadataReader implements IOmMetadataReader, Auditor {
     this.metrics = omMetadataReaderMetrics;
     this.perfMetrics = ozoneManager.getPerfMetrics();
     if (isAclEnabled) {
-      if (ozoneManager.getOmMetadataReader() != null &&
-          !ozoneManager.getOmMetadataReader().isNativeAuthorizerEnabled) {
-        // accessAuthorizer already initialized by ozonemanager
-        accessAuthorizer = ozoneManager.getAccessAuthorizer();
-        isNativeAuthorizerEnabled = false;
-      } else {
-        accessAuthorizer = getACLAuthorizerInstance(configuration);
+      Class<? extends IAccessAuthorizer> clazz = configuration.getClass(
+          OZONE_ACL_AUTHORIZER_CLASS, OzoneAccessAuthorizer.class,
+          IAccessAuthorizer.class);
+      if (bNeedAccessAuthInitialization ||
+          clazz.getSimpleName().equals("OzoneNativeAuthorizer")) {
+        // In case of NativeAuthorizer always re-initialize
+        accessAuthorizer = getACLAuthorizerInstance(configuration, clazz);
         if (accessAuthorizer instanceof OzoneNativeAuthorizer) {
           OzoneNativeAuthorizer authorizer =
               (OzoneNativeAuthorizer) accessAuthorizer;
@@ -125,6 +126,9 @@ public class OmMetadataReader implements IOmMetadataReader, Auditor {
         } else {
           isNativeAuthorizerEnabled = false;
         }
+      } else {
+        accessAuthorizer = ozoneManager.getAccessAuthorizer();
+        isNativeAuthorizerEnabled = false;
       }
     } else {
       accessAuthorizer = null;
@@ -530,10 +534,8 @@ public class OmMetadataReader implements IOmMetadataReader, Auditor {
    * Constructs the instance by passing the configuration directly to the
    * constructor to achieve thread safety using final fields.
    */
-  private IAccessAuthorizer getACLAuthorizerInstance(OzoneConfiguration conf) {
-    Class<? extends IAccessAuthorizer> clazz = conf.getClass(
-        OZONE_ACL_AUTHORIZER_CLASS, OzoneAccessAuthorizer.class,
-        IAccessAuthorizer.class);
+  private IAccessAuthorizer getACLAuthorizerInstance(
+      OzoneConfiguration conf, Class<? extends IAccessAuthorizer> clazz) {
     return ReflectionUtils.newInstance(clazz, conf);
   }
 
