@@ -147,7 +147,7 @@ public class DeleteBucketHandler extends BucketHandler {
       vol.deleteBucket(bucket.getName());
       out().printf("Bucket %s is deleted%n", bucket.getName());
     } catch (Exception e) {
-      out().println("Could not delete bucket.");
+      out().printf("Could not delete bucket %s %n", e.getMessage());
     }
   }
 
@@ -168,12 +168,12 @@ public class DeleteBucketHandler extends BucketHandler {
       clientConf.set(FS_DEFAULT_NAME_KEY, hostPrefix);
       FileSystem fs = FileSystem.get(clientConf);
       if (!fs.delete(path, true)) {
-        out().println("Could not delete bucket.");
+        out().printf("Could not delete bucket %s %n", bucket.getName());
         return;
       }
       out().printf("Bucket %s is deleted%n", bucket.getName());
     } catch (IOException e) {
-      out().println("Could not delete bucket.");
+      out().printf("Could not delete bucket %s %n", bucket.getName());
     }
   }
 }

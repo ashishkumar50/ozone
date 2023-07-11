@@ -977,6 +977,12 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
     if (isKeyPresentInTableCache(keyPrefix, table)) {
       return false;
     }
+    try {
+      getOzoneManager().getOmRatisServer().getOmStateMachine()
+          .awaitDoubleBufferFlush();
+    } catch (Exception e) {
+
+    }
     // check in table
     if (isKeyPresentInTable(keyPrefix, table)) {
       return false; // we found at least one key with this vol/bucket
