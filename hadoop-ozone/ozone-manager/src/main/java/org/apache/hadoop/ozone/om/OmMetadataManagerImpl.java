@@ -909,6 +909,13 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
       }
     }
 
+    try {
+      ozoneManager.getOmRatisServer().getOmStateMachine()
+          .awaitDoubleBufferFlush();
+    } catch (Exception e) {
+      LOG.error("Error in awaiting doublebuffer flush");
+    }
+
     try (TableIterator<String, ? extends KeyValue<String, OmBucketInfo>>
         bucketIter = bucketTable.iterator()) {
       KeyValue<String, OmBucketInfo> kv = bucketIter.seek(volumePrefix);
@@ -976,6 +983,13 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
     // First check in table cache.
     if (isKeyPresentInTableCache(keyPrefix, table)) {
       return false;
+    }
+
+    try {
+      ozoneManager.getOmRatisServer().getOmStateMachine()
+          .awaitDoubleBufferFlush();
+    } catch (Exception e) {
+      LOG.error("Error in awaiting doublebuffer flush");
     }
     // check in table
     if (isKeyPresentInTable(keyPrefix, table)) {
