@@ -77,6 +77,8 @@ import static org.apache.hadoop.ozone.OzoneConsts.OZONE_OFS_URI_SCHEME;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.junit.Assert.assertEquals;
@@ -101,8 +103,13 @@ import picocli.CommandLine.RunLast;
  * This class tests Ozone sh shell command.
  * Inspired by TestS3Shell
  */
+// @RunWith(Parameterized.class)
 public class TestOzoneShellHA {
 
+  /* @Parameterized.Parameters
+  public static Object[][] data() {
+    return new Object[100][0];
+  }*/
   private static final Logger LOG =
       LoggerFactory.getLogger(TestOzoneShellHA.class);
 
@@ -1366,6 +1373,11 @@ public class TestOzoneShellHA {
     execute(ozoneShell, args);
     out.reset();
 
+    // Bucket1 should not exist
+    LambdaTestUtils.intercept(OMException.class,
+        "BUCKET_NOT_FOUND", () -> client.getObjectStore()
+            .getVolume(volume1).getBucket(bucket1));
+
     // Bucket2 and Bucket3 should still exist
     Assert.assertEquals(client.getObjectStore().getVolume(volume1)
         .getBucket(bucket2).getName(), bucket2);
@@ -1380,6 +1392,10 @@ public class TestOzoneShellHA {
     execute(ozoneShell, args);
     out.reset();
 
+    LambdaTestUtils.intercept(OMException.class,
+        "BUCKET_NOT_FOUND", () -> client.getObjectStore()
+            .getVolume(volume1).getBucket(bucket2));
+
     // Delete bucket3(legacy) recursively.
     args =
         new String[] {"bucket", "delete", volume1 +
@@ -1387,17 +1403,6 @@ public class TestOzoneShellHA {
             "-id", omServiceId};
     execute(ozoneShell, args);
     out.reset();
-
-    Thread.sleep(1000);
-
-    // Bucket1 should not exist
-    LambdaTestUtils.intercept(OMException.class,
-        "BUCKET_NOT_FOUND", () -> client.getObjectStore()
-            .getVolume(volume1).getBucket(bucket1));
-
-    LambdaTestUtils.intercept(OMException.class,
-        "BUCKET_NOT_FOUND", () -> client.getObjectStore()
-            .getVolume(volume1).getBucket(bucket2));
 
     LambdaTestUtils.intercept(OMException.class,
         "BUCKET_NOT_FOUND", () -> client.getObjectStore()

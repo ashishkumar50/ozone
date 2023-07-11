@@ -135,7 +135,8 @@ public class OMBucketDeleteRequest extends OMClientRequest {
 
       //Check if bucket is empty
       if (!omMetadataManager.isBucketEmpty(volumeName, bucketName)) {
-        LOG.debug("bucket: {} is not empty ", bucketName);
+        LOG.info("bucket: {} is not empty and OMID is {} ",
+            bucketName, ozoneManager.getOMNodeId());
         throw new OMException("Bucket is not empty",
             OMException.ResultCodes.BUCKET_NOT_EMPTY);
       }
