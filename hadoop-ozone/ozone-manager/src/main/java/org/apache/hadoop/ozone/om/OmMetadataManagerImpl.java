@@ -921,6 +921,9 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
       // Case 1: We found an entry, but no cache entry.
       if (cacheValue == null) {
         // we found at least one key with this prefix.
+        // There is chance cache value flushed when
+        // we iterate through the table.
+        // Check in table whether it is deleted or still present.
         if (bucketTable.getIfExist(kv.getKey()) == null) {
           // already deleted from table also
           kv = bucketIter.next();
@@ -929,6 +932,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
           }
           continue;
         }
+        // Still in table and no entry in cache
         return false;
       }
 
@@ -1063,6 +1067,9 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
         // Case 1: We found an entry, but no cache entry.
         if (cacheValue == null) {
           // we found at least one key with this prefix.
+          // There is chance cache value flushed when
+          // we iterate through the table.
+          // Check in table whether it is deleted or still present.
           if (table.getIfExist(kv.getKey()) == null) {
             kv = keyIter.next();
             if (!keyIter.hasNext()) {
@@ -1070,6 +1077,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
             }
             continue;
           }
+          // Still in table and no entry in cache
           return true;
         }
 
