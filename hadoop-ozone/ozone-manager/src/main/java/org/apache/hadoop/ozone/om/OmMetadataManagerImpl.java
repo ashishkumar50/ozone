@@ -909,37 +909,47 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
       }
     }
 
-    try {
-      ozoneManager.getOmRatisServer().getOmStateMachine()
-          .awaitDoubleBufferFlush();
-    } catch (Exception e) {
-      LOG.error("Error in awaiting doublebuffer flush");
-    }
-
     try (TableIterator<String, ? extends KeyValue<String, OmBucketInfo>>
-        bucketIter = bucketTable.iterator()) {
+             bucketIter = bucketTable.iterator()) {
       KeyValue<String, OmBucketInfo> kv = bucketIter.seek(volumePrefix);
+    while (kv != null && kv.getKey().startsWith(volumePrefix)) {
+      // Check the entry in db is not marked for delete. This can happen
+      // while entry is marked for delete, but it is not flushed to DB.
+      CacheValue<OmBucketInfo> cacheValue =
+          bucketTable.getCacheValue(new CacheKey<>(kv.getKey()));
 
-      if (kv != null) {
-        // Check the entry in db is not marked for delete. This can happen
-        // while entry is marked for delete, but it is not flushed to DB.
-        CacheValue<OmBucketInfo> cacheValue =
-            bucketTable.getCacheValue(new CacheKey(kv.getKey()));
-        if (cacheValue != null) {
-          if (kv.getKey().startsWith(volumePrefix)
-              && cacheValue.getCacheValue() != null) {
-            return false; // we found at least one bucket with this volume
-            // prefix.
+      // Case 1: We found an entry, but no cache entry.
+      if (cacheValue == null) {
+        // we found at least one key with this prefix.
+        if (bucketTable.getIfExist(kv.getKey()) == null) {
+          // already deleted from table also
+          kv = bucketIter.next();
+          if (!bucketIter.hasNext()) {
+            break;
           }
-        } else {
-          if (kv.getKey().startsWith(volumePrefix)) {
-            return false; // we found at least one bucket with this volume
-            // prefix.
-          }
+          continue;
         }
+        return false;
       }
 
+      // Case 2a:
+      // We found a cache entry and cache value is not null.
+      if (cacheValue.getCacheValue() != null) {
+        return false;
+      }
+
+      // Case 2b:
+      // Cache entry is present but cache value is null, hence this key is
+      // marked for deletion.
+      // However, we still need to iterate through the rest of the prefix
+      // range to check for other keys with the same prefix that might still
+      // be present.
+      if (!bucketIter.hasNext()) {
+        break;
+      }
+      kv = bucketIter.next();
     }
+  }
     return true;
   }
 
@@ -985,13 +995,6 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
       return false;
     }
 
-    try {
-      ozoneManager.getOmRatisServer().getOmStateMachine()
-          .awaitDoubleBufferFlush();
-    } catch (Exception e) {
-      LOG.error("Error in awaiting doublebuffer flush");
-    }
-    
     // check in table
     if (isKeyPresentInTable(keyPrefix, table)) {
       return false; // we found at least one key with this vol/bucket
@@ -1060,6 +1063,13 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
         // Case 1: We found an entry, but no cache entry.
         if (cacheValue == null) {
           // we found at least one key with this prefix.
+          if (table.getIfExist(kv.getKey()) == null) {
+            kv = keyIter.next();
+            if (!keyIter.hasNext()) {
+              break;
+            }
+            continue;
+          }
           return true;
         }
 
