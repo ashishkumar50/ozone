@@ -28,6 +28,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.utils.db.managed.ManagedRocksIterator;
@@ -543,6 +545,8 @@ public class RocksDBCheckpointDiffer implements AutoCloseable,
 
         // Mark the beginning of a compaction log
         sb.append(COMPACTION_LOG_ENTRY_LINE_PREFIX);
+        sb.append(db.getLatestSequenceNumber());
+        sb.append(SPACE_DELIMITER);
 
         // Trim DB path, only keep the SST file name
         final int filenameOffset =
@@ -749,12 +753,17 @@ public class RocksDBCheckpointDiffer implements AutoCloseable,
         reconstructionSnapshotGeneration = snapshotLogInfo.snapshotGenerationId;
         reconstructionLastSnapshotID = snapshotLogInfo.snapshotId;
       } else if (line.startsWith(COMPACTION_LOG_ENTRY_LINE_PREFIX)) {
-        // Read compaction log entry
+        // Compaction log entry is like following:
+        // C sequence_number input_files:output_files
+        // where input_files and output_files are joined by ','.
+        String[] lineSpilt = line.split(SPACE_DELIMITER);
+        if (lineSpilt.length != 3) {
+          LOG.error("Invalid line in compaction log: {}", line);
+          return;
+        }
 
-        // Trim the beginning
-        line = line.substring(COMPACTION_LOG_ENTRY_LINE_PREFIX.length());
-        String[] io =
-            line.split(COMPACTION_LOG_ENTRY_INPUT_OUTPUT_FILES_DELIMITER);
+        String[] io = lineSpilt[2]
+            .split(COMPACTION_LOG_ENTRY_INPUT_OUTPUT_FILES_DELIMITER);
 
         if (io.length != 2) {
           if (line.endsWith(":")) {
@@ -858,27 +867,25 @@ public class RocksDBCheckpointDiffer implements AutoCloseable,
    *         e.g. ["/path/to/sstBackupDir/000050.sst",
    *               "/path/to/sstBackupDir/000060.sst"]
    */
-  public List<String> getSSTDiffListWithFullPath(
+  public synchronized List<String> getSSTDiffListWithFullPath(
       DifferSnapshotInfo src,
       DifferSnapshotInfo dest,
       String sstFilesDirForSnapDiffJob
   ) throws IOException {
 
-    synchronized (this) {
-      List<String> sstDiffList = getSSTDiffList(src, dest);
+    List<String> sstDiffList = getSSTDiffList(src, dest);
 
-      return sstDiffList.stream()
-          .map(
-              sst -> {
-                String sstFullPath = getSSTFullPath(sst, src.getDbPath());
-                Path link = Paths.get(sstFilesDirForSnapDiffJob,
-                    sst + SST_FILE_EXTENSION);
-                Path srcFile = Paths.get(sstFullPath);
-                createLink(link, srcFile);
-                return link.toString();
-              })
-          .collect(Collectors.toList());
-    }
+    return sstDiffList.stream()
+        .map(
+            sst -> {
+              String sstFullPath = getSSTFullPath(sst, src.getDbPath());
+              Path link = Paths.get(sstFilesDirForSnapDiffJob,
+                  sst + SST_FILE_EXTENSION);
+              Path srcFile = Paths.get(sstFullPath);
+              createLink(link, srcFile);
+              return link.toString();
+            })
+        .collect(Collectors.toList());
   }
 
   /**
@@ -892,8 +899,8 @@ public class RocksDBCheckpointDiffer implements AutoCloseable,
    * @param dest destination snapshot
    * @return A list of SST files without extension. e.g. ["000050", "000060"]
    */
-  public List<String> getSSTDiffList(DifferSnapshotInfo src,
-                                     DifferSnapshotInfo dest)
+  public synchronized List<String> getSSTDiffList(DifferSnapshotInfo src,
+                                                  DifferSnapshotInfo dest)
       throws IOException {
 
     // TODO: Reject or swap if dest is taken after src, once snapshot chain
@@ -963,7 +970,7 @@ public class RocksDBCheckpointDiffer implements AutoCloseable,
    * diffing).  Otherwise, add it to the differentFiles map, as it will
    * need further diffing.
    */
-  void internalGetSSTDiffList(
+  synchronized void internalGetSSTDiffList(
       DifferSnapshotInfo src, DifferSnapshotInfo dest,
       Set<String> srcSnapFiles, Set<String> destSnapFiles,
       MutableGraph<CompactionNode> mutableGraph,
@@ -1163,6 +1170,12 @@ public class RocksDBCheckpointDiffer implements AutoCloseable,
 
     Set<String> sstFileNodesRemoved =
         pruneSstFileNodesFromDag(lastCompactionSstFiles);
+
+    if (CollectionUtils.isNotEmpty(sstFileNodesRemoved)) {
+      LOG.info("Removing SST files: {} as part of compaction DAG pruning.",
+          sstFileNodesRemoved);
+    }
+
     try (BootstrapStateHandler.Lock lock = getBootstrapStateLock().lock()) {
       removeSstFiles(sstFileNodesRemoved);
       deleteOlderSnapshotsCompactionFiles(olderSnapshotsLogFilePaths);
@@ -1463,14 +1476,18 @@ public class RocksDBCheckpointDiffer implements AutoCloseable,
    * those are not needed to generate snapshot diff. These files are basically
    * non-leaf nodes of the DAG.
    */
-  public void pruneSstFiles() {
+  public synchronized void pruneSstFiles() {
     Set<String> nonLeafSstFiles;
-    synchronized (this) {
-      nonLeafSstFiles = forwardCompactionDAG.nodes().stream()
-          .filter(node -> !forwardCompactionDAG.successors(node).isEmpty())
-          .map(node -> node.getFileName())
-          .collect(Collectors.toSet());
+    nonLeafSstFiles = forwardCompactionDAG.nodes().stream()
+        .filter(node -> !forwardCompactionDAG.successors(node).isEmpty())
+        .map(node -> node.getFileName())
+        .collect(Collectors.toSet());
+
+    if (CollectionUtils.isNotEmpty(nonLeafSstFiles)) {
+      LOG.info("Removing SST files: {} as part of SST file pruning.",
+          nonLeafSstFiles);
     }
+
     try (BootstrapStateHandler.Lock lock = getBootstrapStateLock().lock()) {
       removeSstFiles(nonLeafSstFiles);
     } catch (InterruptedException e) {
