@@ -91,7 +91,7 @@ public class OmMetadataReader implements IOmMetadataReader, Auditor {
                           Logger log,
                           AuditLogger audit,
                           OmMetadataReaderMetrics omMetadataReaderMetrics,
-                          boolean bNeedAccessAuthInitialization) {
+                          boolean needAccessAuthInitialization) {
     this.keyManager = keyManager;
     this.bucketManager = ozoneManager.getBucketManager();
     this.volumeManager = ozoneManager.getVolumeManager();
@@ -108,7 +108,7 @@ public class OmMetadataReader implements IOmMetadataReader, Auditor {
       Class<? extends IAccessAuthorizer> clazz = configuration.getClass(
           OZONE_ACL_AUTHORIZER_CLASS, OzoneAccessAuthorizer.class,
           IAccessAuthorizer.class);
-      if (bNeedAccessAuthInitialization ||
+      if (needAccessAuthInitialization ||
           clazz.getSimpleName().equals(
               OzoneNativeAuthorizer.class.getSimpleName())) {
         // In case of NativeAuthorizer always re-initialize
