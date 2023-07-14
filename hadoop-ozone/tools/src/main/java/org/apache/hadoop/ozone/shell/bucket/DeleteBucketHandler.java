@@ -58,17 +58,10 @@ public class DeleteBucketHandler extends BucketHandler {
       description = "Delete bucket recursively"
   )
   private boolean bRecursive;
-
-  @CommandLine.Option(
-      names = {"-id", "--om-service-id"},
-      description = "Ozone Manager Service ID"
-  )
-  private String omServiceId;
-
   @CommandLine.Option(names = {"-y", "--yes"},
       description = "Continue without interactive user confirmation")
   private boolean yes;
-
+  private String omServiceId;
   private static final int MAX_KEY_DELETE_BATCH_SIZE = 1000;
 
   @Override
@@ -80,23 +73,24 @@ public class DeleteBucketHandler extends BucketHandler {
     OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
 
     if (bRecursive) {
-      Collection<String> serviceIds = getConf().getTrimmedStringCollection(
-          OZONE_OM_SERVICE_IDS_KEY);
-      if (Strings.isNullOrEmpty(omServiceId)) {
-        if (serviceIds.size() > 1) {
-          out().printf("OmServiceID not provided, provide using " +
-              "-id <OM_SERVICE_ID>%n");
-          return;
-        } else if (serviceIds.size() == 1) {
+      if (!Strings.isNullOrEmpty(address.getOmHost())) {
+        omServiceId = address.getOmHost();
+      } else {
+        Collection<String> serviceIds = getConf().getTrimmedStringCollection(
+            OZONE_OM_SERVICE_IDS_KEY);
+        if (serviceIds.size() == 1) {
           // Only one OM service ID configured, we can use that
+          // If more than 1, it will fail in createClient step itself
           omServiceId = serviceIds.iterator().next();
+        } else {
+          omServiceId = getConf().get(OZONE_OM_ADDRESS_KEY);
         }
       }
       if (!yes) {
         // Ask for user confirmation
         out().print("This command will delete bucket recursively." +
             "\nThere is no recovery option after using this command, " +
-            "and no trash for FSO buckets." +
+            "and deleted keys won't move to trash." +
             "\nEnter 'yes' to proceed': ");
         out().flush();
         Scanner scanner = new Scanner(new InputStreamReader(
@@ -113,11 +107,11 @@ public class DeleteBucketHandler extends BucketHandler {
       } else {
         deleteFSBucketRecursive(vol, bucket);
       }
-      out().printf("Bucket %s is deleted%n", bucketName);
       return;
     }
-    out().printf("Bucket %s is deleted%n", bucketName);
+    // Delete bucket without recursive
     vol.deleteBucket(bucketName);
+    out().printf("Bucket %s is deleted%n", bucketName);
   }
 
   /**
@@ -143,8 +137,9 @@ public class DeleteBucketHandler extends BucketHandler {
         }
       }
       vol.deleteBucket(bucket.getName());
+      out().printf("Bucket %s is deleted%n", bucket.getName());
     } catch (Exception e) {
-      out().println("Could not delete bucket.");
+      out().printf("Could not delete bucket %s.%n", e.getMessage());
     }
   }
 
@@ -156,13 +151,8 @@ public class DeleteBucketHandler extends BucketHandler {
    */
   private void deleteFSBucketRecursive(OzoneVolume vol, OzoneBucket bucket) {
     try {
-      String hostPrefix = OZONE_OFS_URI_SCHEME + "://";
-      if (!Strings.isNullOrEmpty(omServiceId)) {
-        hostPrefix += omServiceId + PATH_SEPARATOR_STR;
-      } else {
-        hostPrefix += getConf().get(OZONE_OM_ADDRESS_KEY) +
-            PATH_SEPARATOR_STR;
-      }
+      String hostPrefix = OZONE_OFS_URI_SCHEME + "://" +
+          omServiceId + PATH_SEPARATOR_STR;
       String ofsPrefix = hostPrefix + vol.getName() + PATH_SEPARATOR_STR +
           bucket.getName();
       final Path path = new Path(ofsPrefix);
@@ -170,10 +160,12 @@ public class DeleteBucketHandler extends BucketHandler {
       clientConf.set(FS_DEFAULT_NAME_KEY, hostPrefix);
       FileSystem fs = FileSystem.get(clientConf);
       if (!fs.delete(path, true)) {
-        out().println("Could not delete bucket.");
+        out().printf("Could not delete bucket %s.%n", bucket.getName());
+        return;
       }
+      out().printf("Bucket %s is deleted%n", bucket.getName());
     } catch (IOException e) {
-      out().println("Could not delete bucket.");
+      out().printf("Could not delete bucket %s.%n", e.getMessage());
     }
   }
 }
