@@ -61,13 +61,13 @@ public class ITestRootedOzoneContractRootDir extends
   @Override
   public void testRmEmptyRootDirNonRecursive() {
     // Internally test deletes volume recursively
-    // Which is not supported.
+    // Which is not supported
   }
 
   @Override
   public void testListEmptyRootDirectory() {
     // Internally test deletes volume recursively
-    // Which is not supported.
+    // Which is not supported
   }
 
   @Override
@@ -78,6 +78,6 @@ public class ITestRootedOzoneContractRootDir extends
   @Override
   public void testMkDirDepth1() {
     // Internally test deletes volume recursively
-    // Which is not supported.
+    // Which is not supported
   }
 }
