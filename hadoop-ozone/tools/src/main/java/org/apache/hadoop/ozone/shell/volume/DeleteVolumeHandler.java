@@ -112,6 +112,11 @@ public class DeleteVolumeHandler extends VolumeHandler {
   private void deleteVolumeRecursive()
       throws InterruptedException {
     // Get all the buckets for given volume
+    totalBucketCount = 0;
+    numberOfBucketsCleaned.set(0);
+    cleanedBucketCounter.set(0);
+    bucketIdList.clear();
+
     Iterator<? extends OzoneBucket> bucketIterator =
         vol.listBuckets(null);
 
