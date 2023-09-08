@@ -72,7 +72,6 @@ import org.apache.hadoop.ozone.security.acl.OzoneAclConfig;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.ozone.test.GenericTestUtils;
-import org.apache.ozone.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -131,6 +130,7 @@ import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.DEL
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.LIST;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -247,6 +247,7 @@ public class TestRootedOzoneFileSystem {
     conf.setFloat(FS_TRASH_INTERVAL_KEY, TRASH_INTERVAL);
     conf.setFloat(FS_TRASH_CHECKPOINT_INTERVAL_KEY, TRASH_INTERVAL / 2);
     conf.setBoolean(OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY, omRatisEnabled);
+    conf.setBoolean(OzoneConfigKeys.OZONE_FS_HSYNC_ENABLED, true);
     if (isBucketFSOptimized) {
       bucketLayout = BucketLayout.FILE_SYSTEM_OPTIMIZED;
       conf.set(OMConfigKeys.OZONE_DEFAULT_BUCKET_LAYOUT,
@@ -1739,9 +1740,9 @@ public class TestRootedOzoneFileSystem {
     fs.delete(linkPath, true);
     fs.delete(linkVolumePath, false);
     // confirm link is gone
-    LambdaTestUtils.intercept(FileNotFoundException.class,
-        "File not found.",
+    FileNotFoundException exception = assertThrows(FileNotFoundException.class,
         () -> fs.getFileStatus(dirPathLink));
+    assertTrue(exception.getMessage().contains("File not found."));
 
     // Cleanup
     fs.delete(bucketPath1, true);
@@ -2056,9 +2057,10 @@ public class TestRootedOzoneFileSystem {
     checkInvalidPath(file1);
   }
 
-  private void checkInvalidPath(Path path) throws Exception {
-    LambdaTestUtils.intercept(InvalidPathException.class, "Invalid path Name",
+  private void checkInvalidPath(Path path) {
+    InvalidPathException exception = assertThrows(InvalidPathException.class,
         () -> fs.create(path, false));
+    assertTrue(exception.getMessage().contains("Invalid path Name"));
   }
 
 
@@ -2277,7 +2279,7 @@ public class TestRootedOzoneFileSystem {
     String bucketNameLocal = RandomStringUtils.randomNumeric(5);
     Path volume = new Path("/" + volumeNameLocal);
     ofs.mkdirs(volume);
-    LambdaTestUtils.intercept(OMException.class,
+    assertThrows(OMException.class,
         () -> ofs.getFileStatus(new Path(volume, bucketNameLocal)));
     // Cleanup
     ofs.delete(volume, false);
@@ -2474,9 +2476,11 @@ public class TestRootedOzoneFileSystem {
         diff.getDiffList().get(0).getType());
     Assert.assertEquals(SnapshotDiffReport.DiffType.CREATE,
         diff.getDiffList().get(1).getType());
-    Assert.assertArrayEquals("key1".getBytes(StandardCharsets.UTF_8),
+    Assert.assertArrayEquals(
+        "key1".getBytes(StandardCharsets.UTF_8),
         diff.getDiffList().get(0).getSourcePath());
-    Assert.assertArrayEquals("key2".getBytes(StandardCharsets.UTF_8),
+    Assert.assertArrayEquals(
+        "key2".getBytes(StandardCharsets.UTF_8),
         diff.getDiffList().get(1).getSourcePath());
 
     // test whether snapdiff returns aggregated response as
@@ -2497,17 +2501,24 @@ public class TestRootedOzoneFileSystem {
     Path file =
         new Path(bucketPath1, "key" + RandomStringUtils.randomAlphabetic(5));
     ContractTestUtils.touch(fs, file);
-    diff = ofs.getSnapshotDiffReport(bucketPath1, toSnap, ".");
+    diff = ofs.getSnapshotDiffReport(bucketPath1, toSnap, "");
     Assert.assertEquals(1, diff.getDiffList().size());
 
+    diff = ofs.getSnapshotDiffReport(bucketPath1, "", toSnap);
+    Assert.assertEquals(1, diff.getDiffList().size());
+
+    diff = ofs.getSnapshotDiffReport(bucketPath1, "", "");
+    Assert.assertEquals(0, diff.getDiffList().size());
 
     // try snapDiff between non-bucket paths
     String errorMsg = "Path is not a bucket";
     String finalFromSnap = fromSnap;
     String finalToSnap = toSnap;
-    LambdaTestUtils.intercept(IllegalArgumentException.class, errorMsg,
+    IllegalArgumentException exception = assertThrows(
+        IllegalArgumentException.class,
         () -> ofs.getSnapshotDiffReport(volumePath1, finalFromSnap,
             finalToSnap));
+    assertTrue(exception.getMessage().contains(errorMsg));
   }
 
   @Test
@@ -2536,4 +2547,5 @@ public class TestRootedOzoneFileSystem {
     // verify that mtime is NOT updated as expected.
     Assert.assertEquals(mtime, fileStatus.getModificationTime());
   }
+
 }
