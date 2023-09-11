@@ -659,7 +659,7 @@ public class TestOzoneShellHA {
         getClientConfForOFS(hostPrefix, cluster.getConf());
     OzoneFsShell shell = new OzoneFsShell(clientConf);
 
-    try (FileSystem fs = FileSystem.get(clientConf)) {
+    try {
       int res;
       // Test orphan link bucket when source volume removed
       res = ToolRunner.run(shell, new String[]{"-mkdir", "-p",
@@ -688,7 +688,13 @@ public class TestOzoneShellHA {
       assertEquals(0, res);
 
       args =
-          new String[] {"volume", "delete", "linkvol", "-r", "--yes"};
+          new String[] {"bucket", "delete", "linkvol"
+              + OZONE_URI_DELIMITER + "linkbuck"};
+      execute(ozoneShell, args);
+      out.reset();
+
+      args =
+          new String[] {"volume", "delete", "linkvol"};
       execute(ozoneShell, args);
       out.reset();
       omExecution = assertThrows(OMException.class,
@@ -714,7 +720,13 @@ public class TestOzoneShellHA {
       assertEquals(0, res);
 
       args =
-          new String[] {"volume", "delete", "linkvol", "-r", "--yes"};
+          new String[] {"bucket", "delete", "linkvol"
+              + OZONE_URI_DELIMITER + "linkbuck"};
+      execute(ozoneShell, args);
+      out.reset();
+
+      args =
+          new String[] {"volume", "delete", "linkvol"};
       execute(ozoneShell, args);
       out.reset();
       omExecution = assertThrows(OMException.class,
