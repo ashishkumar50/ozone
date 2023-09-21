@@ -29,9 +29,9 @@ jobs:
       needs-basic-checks: false
       basic-checks: false
       basic-unit: false
-      needs-build: true
+      needs-build: false
       needs-compile: false
-      needs-compose-tests: false
+      needs-compose-tests: true
       needs-dependency-check: false
       needs-integration-tests: false
       needs-kubernetes-tests: false
