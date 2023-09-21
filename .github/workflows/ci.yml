@@ -27,8 +27,8 @@ jobs:
     outputs:
       acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
       needs-basic-checks: ${{ steps.selective-checks.outputs.needs-basic-checks }}
-      basic-checks: ${{ steps.selective-checks.outputs.basic-checks }}
-      basic-unit: false
+      basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
+      basic-unit: ${{ steps.categorize-basic-checks.outputs.basic-unit }}
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}
       needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
       needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
