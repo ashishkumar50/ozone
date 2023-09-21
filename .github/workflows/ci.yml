@@ -26,13 +26,13 @@ jobs:
       GITHUB_CONTEXT: ${{ toJson(github) }}
     outputs:
       acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
-      needs-basic-checks: false
-      basic-checks: false
+      needs-basic-checks: ${{ steps.selective-checks.outputs.needs-basic-checks }}
+      basic-checks: ${{ steps.selective-checks.outputs.basic-checks }}
       basic-unit: false
-      needs-build: false
-      needs-compile: false
+      needs-build: ${{ steps.selective-checks.outputs.needs-build }}
+      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
       needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-dependency-check: false
+      needs-dependency-check: ${{ steps.selective-checks.outputs.needs-dependency-check }}
       needs-integration-tests: false
       needs-kubernetes-tests: false
     steps:
