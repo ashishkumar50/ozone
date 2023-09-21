@@ -31,7 +31,7 @@ jobs:
       basic-unit: false
       needs-build: false
       needs-compile: false
-      needs-compose-tests: true
+      needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
       needs-dependency-check: false
       needs-integration-tests: false
       needs-kubernetes-tests: false
