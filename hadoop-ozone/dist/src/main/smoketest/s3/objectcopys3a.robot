@@ -45,7 +45,7 @@ Put object s3a simulation
 
     ${result} =         Execute AWSS3APICli and checkrc    head-object --bucket ${BUCKET} --key ${PREFIX}/word.txt._COPYING_    0
 
-    ${result} =         Execute AWSS3ApiCli        copy-object --bucket ${BUCKET} --key ${PREFIX}/word.txt --copy-source ${BUCKET}/word.txt._COPYING_
+    ${result} =         Execute AWSS3ApiCli        copy-object --bucket ${BUCKET} --key ${PREFIX}/word.txt --copy-source ${BUCKET}/${PREFIX}/word.txt._COPYING_
 
     ${result} =         Execute AWSS3APICli and checkrc    head-object --bucket ${BUCKET} --key ${PREFIX}/word.txt    0
 
