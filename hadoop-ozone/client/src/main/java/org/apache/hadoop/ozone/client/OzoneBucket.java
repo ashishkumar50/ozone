@@ -575,7 +575,16 @@ public class OzoneBucket extends WithMetadata {
   public Iterator<? extends OzoneKey> listKeys(String keyPrefix, String prevKey,
       boolean shallow) throws IOException {
     return new KeyIteratorFactory()
-        .getKeyIterator(keyPrefix, prevKey, bucketLayout, shallow);
+        .getKeyIterator(keyPrefix, prevKey, bucketLayout, shallow, true);
+  }
+
+  public Iterator<? extends OzoneKey> listKeys(String keyPrefix, String prevKey,
+                                               boolean shallow,
+                                               boolean allowPartialPrefix)
+      throws IOException {
+    return new KeyIteratorFactory()
+        .getKeyIterator(keyPrefix, prevKey, bucketLayout,
+            shallow, allowPartialPrefix);
   }
 
   /**
@@ -879,7 +888,8 @@ public class OzoneBucket extends WithMetadata {
    * @return list of file status
    */
   public List<OzoneFileStatus> listStatus(String keyName, boolean recursive,
-      String startKey, long numEntries, boolean allowPartialPrefix)
+                                          String startKey, long numEntries,
+                                          boolean allowPartialPrefix)
       throws IOException {
     return proxy
         .listStatus(volumeName, name, keyName, recursive, startKey,
@@ -1067,11 +1077,16 @@ public class OzoneBucket extends WithMetadata {
     private Iterator<OzoneKey> currentIterator;
     private OzoneKey currentValue;
     private final boolean shallow;
+    private final boolean allowPartialPrefix;
     private boolean addedKeyPrefix;
     private String delimiterKeyPrefix;
 
     String getKeyPrefix() {
       return keyPrefix;
+    }
+
+    boolean getAllowPartialPrefix() {
+      return allowPartialPrefix;
     }
 
     void setKeyPrefix(String keyPrefixPath) {
@@ -1094,11 +1109,13 @@ public class OzoneBucket extends WithMetadata {
      * @param prevKey
      * @param shallow
      */
-    KeyIterator(String keyPrefix, String prevKey, boolean shallow)
+    KeyIterator(String keyPrefix, String prevKey, boolean shallow,
+                boolean allowPartialPrefix)
         throws IOException {
       setKeyPrefix(keyPrefix);
       this.currentValue = null;
       this.shallow = shallow;
+      this.allowPartialPrefix = allowPartialPrefix;
       this.currentIterator = getNextListOfKeys(prevKey).iterator();
     }
 
@@ -1309,9 +1326,10 @@ public class OzoneBucket extends WithMetadata {
      * @param prevKey
      * @param shallow
      */
-    KeyIteratorWithFSO(String keyPrefix, String prevKey, boolean shallow)
+    KeyIteratorWithFSO(String keyPrefix, String prevKey, boolean shallow,
+                       boolean allowPartialPrefix)
         throws IOException {
-      super(keyPrefix, prevKey, shallow);
+      super(keyPrefix, prevKey, shallow, allowPartialPrefix);
     }
 
     /**
@@ -1495,10 +1513,10 @@ public class OzoneBucket extends WithMetadata {
 
       // listStatus API expects a not null 'startKey' value
       startKey = startKey == null ? "" : startKey;
-
       // 1. Get immediate children of keyPrefix, starting with startKey
       List<OzoneFileStatus> statuses = proxy.listStatus(volumeName, name,
-          keyPrefix, false, startKey, listCacheSize, true);
+          keyPrefix, false, startKey, listCacheSize, getAllowPartialPrefix());
+
       boolean reachedLimitCacheSize = statuses.size() == listCacheSize;
 
       // 2. Special case: ListKey expects keyPrefix element should present in
@@ -1644,11 +1662,15 @@ public class OzoneBucket extends WithMetadata {
 
   private class KeyIteratorFactory {
     KeyIterator getKeyIterator(String keyPrefix, String prevKey,
-        BucketLayout bType, boolean shallow) throws IOException {
+                               BucketLayout bType, boolean shallow,
+                               boolean allowPartialPrefix)
+        throws IOException {
       if (bType.isFileSystemOptimized()) {
-        return new KeyIteratorWithFSO(keyPrefix, prevKey, shallow);
+        return new KeyIteratorWithFSO(keyPrefix, prevKey,
+            shallow, allowPartialPrefix);
       } else {
-        return new KeyIterator(keyPrefix, prevKey, shallow);
+        return new KeyIterator(keyPrefix, prevKey,
+            shallow, allowPartialPrefix);
       }
     }
   }

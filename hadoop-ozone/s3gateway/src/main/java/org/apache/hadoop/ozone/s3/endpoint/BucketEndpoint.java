@@ -115,10 +115,9 @@ public class BucketEndpoint extends EndpointBase {
       @Context HttpHeaders hh) throws OS3Exception, IOException {
     long startNanos = Time.monotonicNowNanos();
     S3GAction s3GAction = S3GAction.GET_BUCKET;
-    Iterator<? extends OzoneKey> ozoneKeyIterator;
+    Iterator<? extends OzoneKey> ozoneKeyIterator = null;
     ContinueToken decodedToken =
         ContinueToken.decodeFromString(continueToken);
-    OzoneBucket bucket;
 
     try {
       if (aclMarker != null) {
@@ -154,17 +153,24 @@ public class BucketEndpoint extends EndpointBase {
       boolean shallow = listKeysShallowEnabled
           && OZONE_URI_DELIMITER.equals(delimiter);
 
-      bucket = getBucket(bucketName);
-      ozoneKeyIterator = bucket.listKeys(prefix, prevKey, shallow);
+      OzoneBucket bucket = getBucket(bucketName);
+      boolean allowPartialPrefix = true;
+      if (bucket.getBucketLayout().isFileSystemOptimized()) {
+        allowPartialPrefix = false;
+      }
+      ozoneKeyIterator = bucket.listKeys(prefix, prevKey, shallow,
+          allowPartialPrefix);
 
     } catch (OMException ex) {
-      AUDIT.logReadFailure(
-          buildAuditMessageForFailure(s3GAction, getAuditParameters(), ex));
-      getMetrics().updateGetBucketFailureStats(startNanos);
-      if (isAccessDenied(ex)) {
-        throw newError(S3ErrorTable.ACCESS_DENIED, bucketName, ex);
-      } else {
-        throw ex;
+      if (ex.getResult() != OMException.ResultCodes.FILE_NOT_FOUND) {
+        AUDIT.logReadFailure(
+            buildAuditMessageForFailure(s3GAction, getAuditParameters(), ex));
+        getMetrics().updateGetBucketFailureStats(startNanos);
+        if (isAccessDenied(ex)) {
+          throw newError(S3ErrorTable.ACCESS_DENIED, bucketName, ex);
+        } else {
+          throw ex;
+        }
       }
     } catch (Exception ex) {
       getMetrics().updateGetBucketFailureStats(startNanos);
@@ -205,16 +211,9 @@ public class BucketEndpoint extends EndpointBase {
     }
     String lastKey = null;
     int count = 0;
-    while (ozoneKeyIterator.hasNext()) {
+    while (ozoneKeyIterator != null && ozoneKeyIterator.hasNext()) {
       OzoneKey next = ozoneKeyIterator.next();
       String relativeKeyName = next.getName().substring(prefix.length());
-      if (bucket.getBucketLayout().isFileSystemOptimized() &&
-          StringUtils.isNotEmpty(prefix) &&
-          !next.getName().contains(prefix)) {
-        // prefix has delimiter but key don't have
-        // example prefix: dir1/ key: dir123
-        continue;
-      }
 
       int depth = StringUtils.countMatches(relativeKeyName, delimiter);
       if (!StringUtils.isEmpty(delimiter)) {
