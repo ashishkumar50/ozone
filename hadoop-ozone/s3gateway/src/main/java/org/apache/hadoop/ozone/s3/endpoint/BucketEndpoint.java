@@ -154,12 +154,8 @@ public class BucketEndpoint extends EndpointBase {
           && OZONE_URI_DELIMITER.equals(delimiter);
 
       OzoneBucket bucket = getBucket(bucketName);
-      boolean allowPartialPrefix = true;
-      if (bucket.getBucketLayout().isFileSystemOptimized()) {
-        allowPartialPrefix = false;
-      }
       ozoneKeyIterator = bucket.listKeys(prefix, prevKey, shallow,
-          allowPartialPrefix);
+          false);
 
     } catch (OMException ex) {
       if (ex.getResult() != OMException.ResultCodes.FILE_NOT_FOUND) {
