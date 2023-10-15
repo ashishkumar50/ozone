@@ -26,16 +26,16 @@ jobs:
       GITHUB_CONTEXT: ${{ toJson(github) }}
     outputs:
       acceptance-suites: ${{ steps.acceptance-suites.outputs.suites }}
-      needs-basic-check: false
-      needs-unit-check: false
+      needs-basic-check: ${{ steps.categorize-basic-checks.outputs.needs-basic-check }}
+      needs-unit-check: ${{ steps.categorize-basic-checks.outputs.needs-unit-check }}
       basic-checks: ${{ steps.categorize-basic-checks.outputs.basic-checks }}
       unit-checks: ${{ steps.categorize-basic-checks.outputs.unit-checks }}
       needs-build: ${{ steps.selective-checks.outputs.needs-build }}
-      needs-compile: false
+      needs-compile: ${{ steps.selective-checks.outputs.needs-compile }}
       needs-compose-tests: ${{ steps.selective-checks.outputs.needs-compose-tests }}
-      needs-dependency-check: false
-      needs-integration-tests: false
-      needs-kubernetes-tests: false
+      needs-dependency-check: ${{ steps.selective-checks.outputs.needs-dependency-check }}
+      needs-integration-tests: ${{ steps.selective-checks.outputs.needs-integration-tests }}
+      needs-kubernetes-tests: ${{ steps.selective-checks.outputs.needs-kubernetes-tests }}
     steps:
       - name: "Checkout ${{ github.ref }} ( ${{ github.sha }} )"
         uses: actions/checkout@v3
@@ -301,12 +301,13 @@ jobs:
     needs:
       - build-info
       - build
+      - basic
     runs-on: ubuntu-20.04
     timeout-minutes: 150
     if: needs.build-info.outputs.needs-compose-tests == 'true'
     strategy:
       matrix:
-        suite: [ 1 ]
+        suite: ${{ fromJson(needs.build-info.outputs.acceptance-suites) }}
       fail-fast: false
     steps:
       - name: Checkout project
@@ -325,11 +326,16 @@ jobs:
         run: |
           pushd hadoop-ozone/dist/target/ozone-*
           sudo mkdir .aws && sudo chmod 777 .aws && sudo chown 1000 .aws
-          cd smoketest/s3
-          ./s3_compatbility_check.sh
+          popd
+          ./hadoop-ozone/dev-support/checks/acceptance.sh
         env:
           KEEP_IMAGE: false
+          OZONE_ACCEPTANCE_SUITE: ${{ matrix.suite }}
           OZONE_VOLUME_OWNER: 1000
+        continue-on-error: true
+      - name: Summary of failures
+        run: hadoop-ozone/dev-support/checks/_summary.sh target/${{ github.job }}/summary.txt
+        if: ${{ !cancelled() }}
       - name: Archive build results
         uses: actions/upload-artifact@v3
         if: always()
