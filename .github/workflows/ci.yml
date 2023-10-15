@@ -325,7 +325,7 @@ jobs:
         run: |
           pushd hadoop-ozone/dist/target/ozone-*
           sudo mkdir .aws && sudo chmod 777 .aws && sudo chown 1000 .aws
-          cd compose/smoketest/s3
+          cd smoketest/s3
           ./s3_compatbility_check.sh
         env:
           KEEP_IMAGE: false
