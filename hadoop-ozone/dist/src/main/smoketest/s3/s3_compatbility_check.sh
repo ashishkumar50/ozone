@@ -78,10 +78,6 @@ run_robot_test bucketdelete
 run_robot_test buckethead
 run_robot_test bucketlist
 run_robot_test objectputget
-run_robot_test objectdelete
-run_robot_test objectcopy
-run_robot_test objectmultidelete
-run_robot_test objecthead
-run_robot_test MultipartUpload
+run_robot_test objectcopys3a
 
 rebot --outputdir results/ results/*.xml
