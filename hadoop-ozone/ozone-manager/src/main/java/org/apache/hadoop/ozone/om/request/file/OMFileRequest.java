@@ -690,7 +690,8 @@ public final class OMFileRequest {
 
       if (omDirInfo != null) {
         lastKnownParentId = omDirInfo.getObjectID();
-      } else if (!elements.hasNext()) {
+      } else if (!elements.hasNext() && 
+          (!(keyName.endsWith(PATH_SEPARATOR_STR)))) {
         // reached last path component. Check file exists for the given path.
         OmKeyInfo omKeyInfo = OMFileRequest.getOmKeyInfoFromFileTable(false,
                 omMetadataMgr, dbNodeName, keyName);
