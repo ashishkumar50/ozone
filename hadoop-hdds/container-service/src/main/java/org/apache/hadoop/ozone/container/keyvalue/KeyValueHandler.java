@@ -614,7 +614,7 @@ public class KeyValueHandler extends Handler {
     }
     return getFinalizeBlockResponse(request, responseData);
   }
-
+  
   ContainerCommandResponseProto handleEcho(
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
     return getEchoResponse(request);

@@ -439,6 +439,9 @@ public final class HddsUtils {
     case StreamInit:
     case StreamWrite:
     case FinalizeBlock:
+      return false;
+    case Echo:
+      return proto.getEcho().hasReadOnly() && proto.getEcho().getReadOnly();
     default:
       return false;
     }
