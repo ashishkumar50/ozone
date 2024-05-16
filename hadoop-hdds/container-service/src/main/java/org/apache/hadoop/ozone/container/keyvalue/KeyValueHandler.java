@@ -575,8 +575,12 @@ public class KeyValueHandler extends Handler {
       ContainerCommandRequestProto request, KeyValueContainer kvContainer) {
     ContainerCommandResponseProto responseProto = checkFaultInjector(request);
     if (responseProto != null) {
+      LOG.warn("Responseproto is not null");
+      LOG.warn(responseProto.toString());
       return responseProto;
     }
+
+    LOG.warn("Responseproto is null");
 
     if (!request.hasFinalizeBlock()) {
       if (LOG.isDebugEnabled()) {
@@ -1470,10 +1474,12 @@ public class KeyValueHandler extends Handler {
 
   private ContainerCommandResponseProto checkFaultInjector(ContainerCommandRequestProto request) {
     if (injector != null) {
+      LOG.warn("Injector is not null");
       Throwable ex = injector.getException();
       if (ex != null) {
         // reset injector
         injector = null;
+        LOG.warn("Returning Injector");
         return ContainerUtils.logAndReturnError(LOG, (StorageContainerException) ex, request);
       }
       try {
@@ -1482,6 +1488,7 @@ public class KeyValueHandler extends Handler {
         // do nothing
       }
     }
+    LOG.warn("Injector is null");
     return null;
   }
 

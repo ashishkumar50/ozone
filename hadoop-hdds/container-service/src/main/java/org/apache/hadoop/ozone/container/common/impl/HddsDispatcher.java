@@ -420,6 +420,9 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
       perf.appendOpLatencyMs(oPLatencyMS);
       performanceAudit(action, params, perf, oPLatencyMS);
 
+      LOG.warn("Printing response in DN");
+      LOG.warn(responseProto.toString());
+
       return responseProto;
     } else {
       // log failure
