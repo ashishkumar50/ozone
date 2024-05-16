@@ -35,11 +35,16 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.ratis.util.function.CheckedBiConsumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A Client for the storageContainer protocol.
  */
 public abstract class XceiverClientSpi implements Closeable {
+
+  static final Logger LOG =
+      LoggerFactory.getLogger(XceiverClientSpi.class);
 
   /**
    * Validator for container command request/response.
@@ -137,6 +142,9 @@ public abstract class XceiverClientSpi implements Closeable {
       XceiverClientReply reply;
       reply = sendCommandAsync(request);
       ContainerCommandResponseProto responseProto = reply.getResponse().get();
+      LOG.warn("Response received: {}", request.getCmdType());
+      LOG.warn(request.toString());
+      LOG.warn(responseProto.toString());
       for (Validator function : validators) {
         function.accept(request, responseProto);
       }

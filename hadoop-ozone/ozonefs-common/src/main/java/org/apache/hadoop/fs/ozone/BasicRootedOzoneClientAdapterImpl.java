@@ -1432,6 +1432,7 @@ public class BasicRootedOzoneClientAdapterImpl
         ContainerProtos.FinalizeBlockResponseProto finalizeBlockResponseProto =
             ContainerProtocolCalls.finalizeBlock(client, block.getBlockID().getDatanodeBlockIDProtobuf(),
                 block.getToken());
+        LOG.warn("Finalize block succeeded");
         return BlockData.getFromProtoBuf(finalizeBlockResponseProto.getBlockData()).getSize();
       }
     } catch (IOException e) {
