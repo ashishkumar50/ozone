@@ -1478,7 +1478,7 @@ public class KeyValueHandler extends Handler {
       Throwable ex = injector.getException();
       if (ex != null) {
         // reset injector
-        injector = null;
+        // injector = null;
         LOG.warn("Returning Injector");
         return ContainerUtils.logAndReturnError(LOG, (StorageContainerException) ex, request);
       }
