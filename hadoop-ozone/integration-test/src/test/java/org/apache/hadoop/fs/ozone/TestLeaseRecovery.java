@@ -163,6 +163,7 @@ public class TestLeaseRecovery {
       stream.flush();
 
       FaultInjectorImpl injector = new FaultInjectorImpl();
+      injector.setType(ContainerProtos.Type.FinalizeBlock);
       KeyValueHandler.setInjector(injector);
       StorageContainerException sce = new StorageContainerException(
           "Requested operation not allowed as ContainerState is CLOSED",

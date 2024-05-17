@@ -1473,12 +1473,10 @@ public class KeyValueHandler extends Handler {
   }
 
   private ContainerCommandResponseProto checkFaultInjector(ContainerCommandRequestProto request) {
-    if (injector != null) {
+    if (injector != null && request.getCmdType().equals(injector.getType())) {
       LOG.warn("Injector is not null");
       Throwable ex = injector.getException();
       if (ex != null) {
-        // reset injector
-        // injector = null;
         LOG.warn("Returning Injector");
         return ContainerUtils.logAndReturnError(LOG, (StorageContainerException) ex, request);
       }
