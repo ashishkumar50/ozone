@@ -310,8 +310,8 @@ public class KeyOutputStream extends OutputStream
       LOG.warn(
           "Encountered exception {} on the pipeline {}. "
               + "The last committed block length is {}, "
-              + "uncommitted data length is {} retry count {}", exception,
-          pipeline, totalSuccessfulFlushedData, bufferedDataLen, reomtryCount);
+              + "uncommitted data length is {}", exception,
+          pipeline, totalSuccessfulFlushedData, bufferedDataLen);
     }
     Preconditions.checkArgument(
         bufferedDataLen <= streamBufferArgs.getStreamBufferMaxSize());
