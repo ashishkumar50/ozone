@@ -50,6 +50,7 @@ import org.apache.hadoop.hdds.scm.metadata.DBTransactionBuffer;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.hdds.utils.db.TableIterator;
 
@@ -94,11 +95,13 @@ public class DeletedBlockLogImpl
 
   private static final int LIST_ALL_FAILED_TRANSACTIONS = -1;
 
+  private final DeleteTableIterator deleteTableIterator;
+
   public DeletedBlockLogImpl(ConfigurationSource conf,
       StorageContainerManager scm,
       ContainerManager containerManager,
       DBTransactionBuffer dbTxBuffer,
-      ScmBlockDeletingServiceMetrics metrics) {
+      ScmBlockDeletingServiceMetrics metrics) throws IOException {
     maxRetry = conf.getInt(OZONE_SCM_BLOCK_DELETION_MAX_RETRY,
         OZONE_SCM_BLOCK_DELETION_MAX_RETRY_DEFAULT);
     this.containerManager = containerManager;
@@ -115,9 +118,33 @@ public class DeletedBlockLogImpl
     this.scmContext = scm.getScmContext();
     this.sequenceIdGen = scm.getSequenceIdGen();
     this.metrics = metrics;
+    deleteTableIterator = new DeleteTableIterator();
     this.transactionStatusManager =
         new SCMDeletedBlockTransactionStatusManager(deletedBlockLogStateManager,
             containerManager, this.scmContext, metrics, scmCommandTimeoutMs);
+  }
+
+
+  private final class DeleteTableIterator {
+    private TableIterator<Long, ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> iter;
+
+    private DeleteTableIterator() throws IOException {
+      iter = deletedBlockLogStateManager.getReadOnlyIterator();
+    }
+
+    private void closeItr() {
+      IOUtils.closeQuietly(iter);
+      iter = null;
+    }
+
+    private void reInitItr() throws IOException {
+      closeItr();
+      iter = deletedBlockLogStateManager.getReadOnlyIterator();
+    }
+
+    private TableIterator<Long, ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> getIter() {
+      return iter;
+    }
   }
 
   @Override
@@ -341,9 +368,11 @@ public class DeletedBlockLogImpl
           scmCommandTimeoutMs);
       DatanodeDeletedBlockTransactions transactions =
           new DatanodeDeletedBlockTransactions();
-      try (TableIterator<Long,
-          ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> iter =
-               deletedBlockLogStateManager.getReadOnlyIterator()) {
+      try (TableIterator<Long, ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> iter =
+               deleteTableIterator.getIter()) {
+        if (!iter.hasNext()) {
+          deleteTableIterator.reInitItr();
+        }
         // Get the CmdStatus status of the aggregation, so that the current
         // status of the specified transaction can be found faster
         Map<UUID, Map<Long, CmdStatus>> commandStatus =
@@ -385,6 +414,9 @@ public class DeletedBlockLogImpl
           } catch (ContainerNotFoundException ex) {
             LOG.warn("Container: {} was not found for the transaction: {}.", id, txn);
             txIDs.add(txn.getTxID());
+          }
+          if (!iter.hasNext()) {
+            deleteTableIterator.reInitItr();
           }
         }
         if (!txIDs.isEmpty()) {
