@@ -405,8 +405,6 @@ public class TestDeletedBlockLog {
     List<Long> txIDs = blocks.stream().map(DeletedBlocksTransaction::getTxID)
         .distinct().collect(Collectors.toList());
 
-    System.out.println("hereeeee");
-    System.out.println(blocks);
     for (int i = 0; i < maxRetry; i++) {
       incrementCount(txIDs);
     }

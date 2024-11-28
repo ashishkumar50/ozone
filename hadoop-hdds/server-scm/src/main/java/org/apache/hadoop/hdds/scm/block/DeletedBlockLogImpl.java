@@ -99,7 +99,7 @@ public class DeletedBlockLogImpl
       StorageContainerManager scm,
       ContainerManager containerManager,
       DBTransactionBuffer dbTxBuffer,
-      ScmBlockDeletingServiceMetrics metrics) throws IOException {
+      ScmBlockDeletingServiceMetrics metrics) {
     maxRetry = conf.getInt(OZONE_SCM_BLOCK_DELETION_MAX_RETRY,
         OZONE_SCM_BLOCK_DELETION_MAX_RETRY_DEFAULT);
     this.containerManager = containerManager;
@@ -399,15 +399,16 @@ public class DeletedBlockLogImpl
             txIDs.add(txn.getTxID());
           }
           if (!iter.hasNext()) {
-            TableIterator<Long,
+            try (TableIterator<Long,
                 ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> tmpIter =
-                deletedBlockLogStateManager.getReadOnlyIterator();
-            if (tmpIter.hasNext()) {
-              Table.KeyValue<Long, DeletedBlocksTransaction> keyValue1 = tmpIter.next();
-              if (keyValue1.getKey() != firstProcessedTransactionKey) {
-                iter.seek(keyValue1.getKey());
-              } else {
-                break;
+                deletedBlockLogStateManager.getReadOnlyIterator()) {
+              if (tmpIter.hasNext()) {
+                Table.KeyValue<Long, DeletedBlocksTransaction> keyValue1 = tmpIter.next();
+                if (keyValue1.getKey() != firstProcessedTransactionKey) {
+                  iter.seek(keyValue1.getKey());
+                } else {
+                  break;
+                }
               }
             }
           }
