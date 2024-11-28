@@ -26,7 +26,6 @@ import java.util.Set;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -51,7 +50,6 @@ import org.apache.hadoop.hdds.scm.metadata.DBTransactionBuffer;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
-import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.hdds.utils.db.TableIterator;
 
@@ -95,10 +93,7 @@ public class DeletedBlockLogImpl
   private long scmCommandTimeoutMs = Duration.ofSeconds(300).toMillis();
 
   private static final int LIST_ALL_FAILED_TRANSACTIONS = -1;
-
-  private final DeleteTableIterator deleteTableIterator;
-
-  private static Long lastProcessedTransactionId = -1l;
+  private Long lastProcessedTransactionId;
 
   public DeletedBlockLogImpl(ConfigurationSource conf,
       StorageContainerManager scm,
@@ -121,34 +116,10 @@ public class DeletedBlockLogImpl
     this.scmContext = scm.getScmContext();
     this.sequenceIdGen = scm.getSequenceIdGen();
     this.metrics = metrics;
-    deleteTableIterator = new DeleteTableIterator();
+    this.lastProcessedTransactionId = -1L;
     this.transactionStatusManager =
         new SCMDeletedBlockTransactionStatusManager(deletedBlockLogStateManager,
             containerManager, this.scmContext, metrics, scmCommandTimeoutMs);
-  }
-
-
-  private final class DeleteTableIterator {
-    private TableIterator<Long, ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> iter;
-
-    private DeleteTableIterator() throws IOException {
-      iter = deletedBlockLogStateManager.getReadOnlyIterator();
-    }
-
-    private void closeItr() {
-      IOUtils.closeQuietly(iter);
-      iter = null;
-    }
-
-    private void reInitItr() throws IOException {
-      closeItr();
-      iter = deletedBlockLogStateManager.getReadOnlyIterator();
-    }
-
-    private TableIterator<Long, ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> getIter()
-        throws IOException {
-      return iter;
-    }
   }
 
   @Override
@@ -429,10 +400,10 @@ public class DeletedBlockLogImpl
           }
           if (!iter.hasNext()) {
             TableIterator<Long,
-                ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> iter1 =
+                ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> tmpIter =
                 deletedBlockLogStateManager.getReadOnlyIterator();
-            if (iter1.hasNext()) {
-              Table.KeyValue<Long, DeletedBlocksTransaction> keyValue1 = iter1.next();
+            if (tmpIter.hasNext()) {
+              Table.KeyValue<Long, DeletedBlocksTransaction> keyValue1 = tmpIter.next();
               if (keyValue1.getKey() != firstProcessedTransactionKey) {
                 iter.seek(keyValue1.getKey());
               } else {
@@ -444,7 +415,7 @@ public class DeletedBlockLogImpl
         if (iter.hasNext()) {
           lastProcessedTransactionId = iter.next().getKey();
         } else {
-          lastProcessedTransactionId = -1l;
+          lastProcessedTransactionId = -1L;
         }
         if (!txIDs.isEmpty()) {
           deletedBlockLogStateManager.removeTransactionsFromDB(txIDs);
