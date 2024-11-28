@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -97,6 +98,8 @@ public class DeletedBlockLogImpl
 
   private final DeleteTableIterator deleteTableIterator;
 
+  private static Long lastProcessedTransactionId = -1l;
+
   public DeletedBlockLogImpl(ConfigurationSource conf,
       StorageContainerManager scm,
       ContainerManager containerManager,
@@ -142,7 +145,8 @@ public class DeletedBlockLogImpl
       iter = deletedBlockLogStateManager.getReadOnlyIterator();
     }
 
-    private TableIterator<Long, ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> getIter() {
+    private TableIterator<Long, ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> getIter()
+        throws IOException {
       return iter;
     }
   }
@@ -368,10 +372,12 @@ public class DeletedBlockLogImpl
           scmCommandTimeoutMs);
       DatanodeDeletedBlockTransactions transactions =
           new DatanodeDeletedBlockTransactions();
-      try (TableIterator<Long, ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> iter =
-               deleteTableIterator.getIter()) {
-        if (!iter.hasNext()) {
-          deleteTableIterator.reInitItr();
+      long firstProcessedTransactionKey = -1;
+      try (TableIterator<Long,
+          ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> iter =
+               deletedBlockLogStateManager.getReadOnlyIterator()) {
+        if (lastProcessedTransactionId != -1) {
+          iter.seek(lastProcessedTransactionId);
         }
         // Get the CmdStatus status of the aggregation, so that the current
         // status of the specified transaction can be found faster
@@ -389,6 +395,12 @@ public class DeletedBlockLogImpl
             transactions.getBlocksDeleted() < blockDeletionLimit) {
           Table.KeyValue<Long, DeletedBlocksTransaction> keyValue = iter.next();
           DeletedBlocksTransaction txn = keyValue.getValue();
+          if (firstProcessedTransactionKey == keyValue.getKey()) {
+            break;
+          }
+          if (firstProcessedTransactionKey == -1) {
+            firstProcessedTransactionKey = keyValue.getKey();
+          }
           final ContainerID id = ContainerID.valueOf(txn.getContainerID());
           try {
             // HDDS-7126. When container is under replicated, it is possible
@@ -416,8 +428,23 @@ public class DeletedBlockLogImpl
             txIDs.add(txn.getTxID());
           }
           if (!iter.hasNext()) {
-            deleteTableIterator.reInitItr();
+            TableIterator<Long,
+                ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> iter1 =
+                deletedBlockLogStateManager.getReadOnlyIterator();
+            if (iter1.hasNext()) {
+              Table.KeyValue<Long, DeletedBlocksTransaction> keyValue1 = iter1.next();
+              if (keyValue1.getKey() != firstProcessedTransactionKey) {
+                iter.seek(keyValue1.getKey());
+              } else {
+                break;
+              }
+            }
           }
+        }
+        if (iter.hasNext()) {
+          lastProcessedTransactionId = iter.next().getKey();
+        } else {
+          lastProcessedTransactionId = -1l;
         }
         if (!txIDs.isEmpty()) {
           deletedBlockLogStateManager.removeTransactionsFromDB(txIDs);

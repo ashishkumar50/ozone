@@ -405,6 +405,8 @@ public class TestDeletedBlockLog {
     List<Long> txIDs = blocks.stream().map(DeletedBlocksTransaction::getTxID)
         .distinct().collect(Collectors.toList());
 
+    System.out.println("hereeeee");
+    System.out.println(blocks);
     for (int i = 0; i < maxRetry; i++) {
       incrementCount(txIDs);
     }
@@ -412,8 +414,12 @@ public class TestDeletedBlockLog {
     // Increment another time so it exceed the maxRetry.
     // On this call, count will be set to -1 which means TX eventually fails.
     incrementCount(txIDs);
+    System.out.println("heyyyy");
+    System.out.println(blocks);
     blocks = getAllTransactions();
     for (DeletedBlocksTransaction block : blocks) {
+      System.out.println("entered here");
+      System.out.println(block);
       assertEquals(-1, block.getCount());
     }
 
