@@ -403,9 +403,9 @@ public class DeletedBlockLogImpl
                 ? extends Table.KeyValue<Long, DeletedBlocksTransaction>> tmpIter =
                 deletedBlockLogStateManager.getReadOnlyIterator()) {
               if (tmpIter.hasNext()) {
-                Table.KeyValue<Long, DeletedBlocksTransaction> keyValue1 = tmpIter.next();
-                if (keyValue1.getKey() != firstProcessedTransactionKey) {
-                  iter.seek(keyValue1.getKey());
+                keyValue = tmpIter.next();
+                if (keyValue.getKey() != firstProcessedTransactionKey) {
+                  iter.seek(keyValue.getKey());
                 } else {
                   break;
                 }
