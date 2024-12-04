@@ -456,7 +456,7 @@ public class TestDeletedBlockLog {
     List<Long> txIDs = new ArrayList<>();
     int i = 1;
     while (i < noOfTransactions) {
-      // In each iteration read two transaction and it returns in order
+      // In each iteration read two transaction, API returns all the transactions in order.
       // 1st iteration: {1, 2}
       // 2nd iteration: {3, 4}
       // 3rd iteration: {5, 6}
@@ -466,13 +466,14 @@ public class TestDeletedBlockLog {
       assertEquals(blocks.get(1).getTxID(), i++);
     }
 
-    // CASE2: When some transactions are not available for delete in the current iteration
-    // New transactions Id added as { 9, 10, 11, 12, 13, 14, 15, 16}
+    // CASE2: When some transactions are not available for delete in the current iteration,
+    // either due to max retry reach or some other issue.
+    // New transactions Id is { 9, 10, 11, 12, 13, 14, 15, 16}
     addTransactions(generateData(noOfTransactions), true);
     mockContainerHealthResult(true);
 
     // Mark transaction Id 11 as reached max retry count so that it will be ignored
-    // by scm deleting service
+    // by scm deleting service while fetching transaction for delete
     int ignoreTransactionId = 11;
     txIDs.add((long) ignoreTransactionId);
     for (i = 0; i < maxRetry; i++) {
@@ -482,15 +483,15 @@ public class TestDeletedBlockLog {
 
     i = 9;
     while (true) {
-      // In each iteration read two transaction,
-      // if any transaction which is not available for delete in the current iteration
+      // In each iteration read two transaction.
+      // If any transaction which is not available for delete in the current iteration,
       // it will be ignored and will be re-checked again only after complete table is read.
       // 1st iteration: {9, 10}
       // 2nd iteration: {12, 13} Transaction 11 is ignored here
       // 3rd iteration: {14, 15} Transaction 11 is available here,
       // but it will be read only when all db records are read till the end.
-      // 4th iteration: {16, 11} Iterator starts from beginning
-      // once it reaches end, and it returns transaction 11 as well
+      // 4th iteration: {16, 11} Since iterator reached at the end of table after reading transaction 16,
+      // Iterator starts from beginning again, and it returns transaction 11 as well
       blocks = getTransactions(2 * BLOCKS_PER_TXN * THREE);
       if (i == ignoreTransactionId) {
         i++;
