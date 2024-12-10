@@ -2038,6 +2038,7 @@ public class RpcClient implements ClientProtocol {
           .setMultipartNumber(partNumber)
           .setMultipartUploadID(uploadID)
           .setIsMultipartKey(true)
+          .setOmVersion(omVersion)
           .build();
       keyOutputStream.addPreallocateBlocks(
           openKey.getKeyInfo().getLatestVersionLocations(),
@@ -2047,7 +2048,7 @@ public class RpcClient implements ClientProtocol {
     } else {
       out = createMultipartOutputStream(openKey, uploadID, partNumber);
     }
-    return new OzoneDataStreamOutput(out);
+    return new OzoneDataStreamOutput(out, (Syncable) out);
   }
 
   @Override
@@ -2463,6 +2464,7 @@ public class RpcClient implements ClientProtocol {
       KeyDataStreamOutput keyOutputStream = newKeyOutputStreamBuilder()
           .setHandler(openKey)
           .setReplicationConfig(replicationConfig)
+          .setOmVersion(omVersion)
           .build();
       keyOutputStream.addPreallocateBlocks(
           openKey.getKeyInfo().getLatestVersionLocations(),
@@ -2472,7 +2474,7 @@ public class RpcClient implements ClientProtocol {
     } else {
       out = createOutputStream(openKey);
     }
-    return new OzoneDataStreamOutput(out);
+    return new OzoneDataStreamOutput(out, (Syncable) out);
   }
 
   private KeyDataStreamOutput.Builder newKeyOutputStreamBuilder() {
@@ -2484,7 +2486,8 @@ public class RpcClient implements ClientProtocol {
         .setOmClient(ozoneManagerClient)
         .enableUnsafeByteBufferConversion(unsafeByteBufferConversion)
         .setConfig(clientConfig)
-        .setAtomicKeyCreation(isS3GRequest.get());
+        .setAtomicKeyCreation(isS3GRequest.get())
+        .setOmVersion(omVersion);
   }
 
   private OzoneOutputStream createOutputStream(OpenKeySession openKey)

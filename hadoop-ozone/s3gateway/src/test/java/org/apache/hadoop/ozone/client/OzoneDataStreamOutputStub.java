@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.ozone.client;
 
+import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.hdds.scm.storage.ByteBufferStreamOutput;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.io.OzoneDataStreamOutput;
@@ -42,7 +43,7 @@ public class OzoneDataStreamOutputStub extends OzoneDataStreamOutput {
   public OzoneDataStreamOutputStub(
       ByteBufferStreamOutput byteBufferStreamOutput,
       String partName) {
-    super(byteBufferStreamOutput);
+    super(byteBufferStreamOutput, (Syncable) byteBufferStreamOutput);
     this.partName = partName;
   }
 

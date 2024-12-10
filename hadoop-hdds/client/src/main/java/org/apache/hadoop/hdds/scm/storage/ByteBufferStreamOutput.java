@@ -56,4 +56,6 @@ public interface ByteBufferStreamOutput extends Closeable {
    * @exception  IOException  if an I/O error occurs.
    */
   void flush() throws IOException;
+
+  void hsync() throws IOException;
 }
