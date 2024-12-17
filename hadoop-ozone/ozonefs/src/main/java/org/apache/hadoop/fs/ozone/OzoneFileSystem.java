@@ -116,6 +116,13 @@ public class OzoneFileSystem extends BasicOzoneFileSystem
     return new CapableOzoneFSInputStream(inputStream, statistics);
   }
 
+
+  @Override
+  protected OzoneFSDataStreamOutput createFSDataStreamOutput(
+      OzoneFSDataStreamOutput outputDataStream) {
+    return new CapableOzoneFSDataStreamOutput(outputDataStream, isHsyncEnabled());
+  }
+
   @Override
   protected OzoneFSOutputStream createFSOutputStream(
           OzoneFSOutputStream outputStream) {
