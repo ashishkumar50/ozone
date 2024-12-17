@@ -79,9 +79,7 @@ public class OzoneDataStreamOutput extends ByteBufferOutputStream
                            boolean enableHsync) {
     this.byteBufferStreamOutput = Objects.requireNonNull(byteBufferStreamOutput,
         "byteBufferStreamOutput == null");
-    this.syncable = syncable != null ? syncable
-        : byteBufferStreamOutput instanceof Syncable ? byteBufferStreamOutput
-        : null;
+    this.syncable = syncable != null ? syncable : byteBufferStreamOutput;
     this.enableHsync = enableHsync;
   }
 
