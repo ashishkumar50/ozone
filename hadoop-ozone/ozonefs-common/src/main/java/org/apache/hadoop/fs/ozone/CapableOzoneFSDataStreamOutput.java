@@ -18,10 +18,10 @@
 package org.apache.hadoop.fs.ozone;
 
 import org.apache.hadoop.fs.StreamCapabilities;
+import org.apache.hadoop.hdds.scm.storage.ByteBufferStreamOutput;
 import org.apache.hadoop.ozone.client.io.KeyDataStreamOutput;
 import org.apache.hadoop.util.StringUtils;
 
-import java.io.OutputStream;
 
 /**
  * This class is used to workaround Hadoop2 compatibility issues.
@@ -44,11 +44,11 @@ public class CapableOzoneFSDataStreamOutput extends OzoneFSDataStreamOutput
 
   @Override
   public boolean hasCapability(String capability) {
-    OutputStream os = (OutputStream) getByteBufferStreamOutput();
+    ByteBufferStreamOutput os = getByteBufferStreamOutput();
     return hasWrappedCapability(os, capability);
   }
 
-  private boolean hasWrappedCapability(OutputStream os,
+  private boolean hasWrappedCapability(ByteBufferStreamOutput os,
       String capability) {
 
     if (os instanceof KeyDataStreamOutput) {

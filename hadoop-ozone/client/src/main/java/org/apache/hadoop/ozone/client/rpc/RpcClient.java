@@ -2047,7 +2047,7 @@ public class RpcClient implements ClientProtocol {
     } else {
       out = createMultipartOutputStream(openKey, uploadID, partNumber);
     }
-    return new OzoneDataStreamOutput((OutputStream) out, out);
+    return new OzoneDataStreamOutput(out, (Syncable) out);
   }
 
   @Override
@@ -2472,7 +2472,7 @@ public class RpcClient implements ClientProtocol {
     } else {
       out = createOutputStream(openKey);
     }
-    return new OzoneDataStreamOutput((OutputStream) out, out);
+    return new OzoneDataStreamOutput(out, (Syncable) out);
   }
 
   private KeyDataStreamOutput.Builder newKeyOutputStreamBuilder() {

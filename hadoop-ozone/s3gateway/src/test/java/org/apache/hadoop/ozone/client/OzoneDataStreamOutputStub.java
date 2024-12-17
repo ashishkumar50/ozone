@@ -20,13 +20,13 @@
 
 package org.apache.hadoop.ozone.client;
 
+import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.hdds.scm.storage.ByteBufferStreamOutput;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.io.OzoneDataStreamOutput;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 /**
@@ -43,7 +43,7 @@ public class OzoneDataStreamOutputStub extends OzoneDataStreamOutput {
   public OzoneDataStreamOutputStub(
       ByteBufferStreamOutput byteBufferStreamOutput,
       String partName) {
-    super((OutputStream) byteBufferStreamOutput, byteBufferStreamOutput);
+    super(byteBufferStreamOutput, (Syncable) byteBufferStreamOutput);
     this.partName = partName;
   }
 

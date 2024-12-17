@@ -47,8 +47,8 @@ public class OzoneDataStreamOutput extends ByteBufferOutputStream
   public OzoneDataStreamOutput(Syncable outputStream, boolean enableHsync) {
     this(Optional.of(Objects.requireNonNull(outputStream,
                 "outputStream == null"))
-            .filter(s -> s instanceof OutputStream)
-            .map(s -> (OutputStream)s)
+            .filter(s -> s instanceof OzoneDataStreamOutput)
+            .map(s -> (OzoneDataStreamOutput)s)
             .orElseThrow(() -> new IllegalArgumentException(
                 "The parameter syncable is not an OutputStream")),
         outputStream, enableHsync);
@@ -58,12 +58,12 @@ public class OzoneDataStreamOutput extends ByteBufferOutputStream
    * Constructs an instance with a (non-{@link Syncable}) {@link OutputStream}
    * with an optional {@link Syncable} object.
    *
-   * @param outputStream for writing data.
+   * @param byteBufferStreamOutput for writing data.
    * @param syncable an optional parameter
    *                 for accessing the {@link Syncable} feature.
    */
-  public OzoneDataStreamOutput(OutputStream outputStream, Syncable syncable) {
-    this(outputStream, syncable, false);
+  public OzoneDataStreamOutput(ByteBufferStreamOutput byteBufferStreamOutput, Syncable syncable) {
+    this(byteBufferStreamOutput, syncable, false);
   }
 
   /**
@@ -75,13 +75,12 @@ public class OzoneDataStreamOutput extends ByteBufferOutputStream
    *                 for accessing the {@link Syncable} feature.
    * @param enableHsync if false, hsync() executes flush() instead.
    */
-  public OzoneDataStreamOutput(OutputStream outputStream, Syncable syncable,
+  public OzoneDataStreamOutput(ByteBufferStreamOutput byteBufferStreamOutput, Syncable syncable,
                            boolean enableHsync) {
-    this.byteBufferStreamOutput = outputStream != null ? outputStream instanceof ByteBufferStreamOutput ?
-        (ByteBufferStreamOutput) outputStream
-        : null : null;
+    this.byteBufferStreamOutput = Objects.requireNonNull(byteBufferStreamOutput,
+        "byteBufferStreamOutput == null");
     this.syncable = syncable != null ? syncable
-        : outputStream instanceof Syncable ? (Syncable) outputStream
+        : byteBufferStreamOutput instanceof Syncable ? (Syncable) byteBufferStreamOutput
         : null;
     this.enableHsync = enableHsync;
   }
