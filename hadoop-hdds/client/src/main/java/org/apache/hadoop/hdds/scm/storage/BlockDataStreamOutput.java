@@ -508,8 +508,19 @@ public class BlockDataStreamOutput implements ByteBufferStreamOutput {
   }
 
   @Override
-  public void hsync() throws IOException {
+  public void hflush() throws IOException {
+    hsync();
+  }
 
+  @Override
+  public void hsync() throws IOException {
+    try {
+      if (!isClosed()) {
+        handleFlush(false);
+      }
+    } catch (Exception e) {
+
+    }
   }
 
   public void waitFuturesComplete() throws IOException {

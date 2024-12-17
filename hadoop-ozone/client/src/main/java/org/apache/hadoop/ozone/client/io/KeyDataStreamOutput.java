@@ -20,10 +20,8 @@ package org.apache.hadoop.ozone.client.io;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.OzoneClientConfig;
 import org.apache.hadoop.hdds.scm.XceiverClientFactory;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
@@ -33,15 +31,12 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.storage.AbstractDataStreamOutput;
 import org.apache.hadoop.hdds.scm.storage.BlockDataStreamOutput;
-import org.apache.hadoop.hdds.scm.storage.ByteBufferStreamOutput;
-import org.apache.hadoop.ozone.OzoneManagerVersion;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
-import org.apache.hadoop.ozone.util.MetricUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +57,7 @@ import java.util.UUID;
  * TODO : currently not support multi-thread access.
  */
 public class KeyDataStreamOutput extends AbstractDataStreamOutput
-    implements Syncable, KeyMetadataAware {
+    implements KeyMetadataAware {
 
   private OzoneClientConfig config;
 
@@ -86,7 +81,6 @@ public class KeyDataStreamOutput extends AbstractDataStreamOutput
   private final BlockDataStreamOutputEntryPool blockDataStreamOutputEntryPool;
 
   private long clientID;
-  private OzoneManagerVersion ozoneManagerVersion;
 
   /**
    * Indicates if an atomic write is required. When set to true,
@@ -248,18 +242,12 @@ public class KeyDataStreamOutput extends AbstractDataStreamOutput
 
   @Override
   public void hsync() throws IOException {
-      if (ozoneManagerVersion.compareTo(OzoneManagerVersion.HBASE_SUPPORT) < 0) {
-        throw new UnsupportedOperationException("Hsync API requires OM version "
-            + OzoneManagerVersion.HBASE_SUPPORT + " or later. Current OM version "
-            + ozoneManagerVersion);
-      }
-      checkNotClosed();
-      final long hsyncPos = writeOffset;
-      handleFlushOrClose(KeyDataStreamOutput.StreamAction.HSYNC);
-
-      Preconditions.checkState(offset >= hsyncPos,
-          "offset = %s < hsyncPos = %s", offset, hsyncPos);
-      blockDataStreamOutputEntryPool.hsyncKey(hsyncPos);
+    checkNotClosed();
+    final long hsyncPos = writeOffset;
+    handleFlushOrClose(KeyDataStreamOutput.StreamAction.HSYNC);
+    Preconditions.checkState(offset >= hsyncPos,
+        "offset = %s < hsyncPos = %s", offset, hsyncPos);
+    blockDataStreamOutputEntryPool.hsyncKey(hsyncPos);
   }
 
   /**
@@ -422,6 +410,9 @@ public class KeyDataStreamOutput extends AbstractDataStreamOutput
     case FLUSH:
       entry.flush();
       break;
+    case HSYNC:
+      entry.hsync();
+      break;
     default:
       throw new IOException("Invalid Operation");
     }
@@ -485,8 +476,6 @@ public class KeyDataStreamOutput extends AbstractDataStreamOutput
     private OzoneClientConfig clientConfig;
     private ReplicationConfig replicationConfig;
     private boolean atomicKeyCreation = false;
-    private OzoneManagerVersion ozoneManagerVersion;
-
     public Builder setMultipartUploadID(String uploadID) {
       this.multipartUploadID = uploadID;
       return this;
@@ -541,15 +530,6 @@ public class KeyDataStreamOutput extends AbstractDataStreamOutput
     public Builder setAtomicKeyCreation(boolean atomicKey) {
       this.atomicKeyCreation = atomicKey;
       return this;
-    }
-
-    public Builder setOmVersion(OzoneManagerVersion omVersion) {
-      this.ozoneManagerVersion = omVersion;
-      return this;
-    }
-
-    public OzoneManagerVersion getOmVersion() {
-      return ozoneManagerVersion;
     }
 
     public KeyDataStreamOutput build() {

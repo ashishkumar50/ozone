@@ -299,7 +299,7 @@ public class BasicRootedOzoneFileSystem extends FileSystem {
       boolean overwrite, boolean recursive, int byteWritten)
       throws IOException {
     return isRatisStreamingEnabled && byteWritten > streamingAutoThreshold ?
-        adapter.createStreamFile(key, replication, overwrite, recursive)
+        createFSDataStreamOutput(adapter.createStreamFile(key, replication, overwrite, recursive))
         : createFSOutputStream(adapter.createFile(
         key, replication, overwrite, recursive));
   }
@@ -317,6 +317,11 @@ public class BasicRootedOzoneFileSystem extends FileSystem {
     return new FSDataOutputStream(createFSOutputStream(
             adapter.createFile(key,
         replication, overwrite, recursive)), statistics);
+  }
+
+  protected OzoneFSDataStreamOutput createFSDataStreamOutput(
+      OzoneFSDataStreamOutput outputDataStream) {
+    return outputDataStream;
   }
 
   protected OzoneFSOutputStream createFSOutputStream(

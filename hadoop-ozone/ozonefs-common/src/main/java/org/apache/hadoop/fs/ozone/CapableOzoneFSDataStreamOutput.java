@@ -17,19 +17,22 @@
  */
 package org.apache.hadoop.fs.ozone;
 
-import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.fs.impl.StoreImplementationUtils;
-import org.apache.hadoop.hdds.scm.storage.ByteBufferStreamOutput;
-import org.apache.hadoop.ozone.client.io.ECKeyOutputStream;
 import org.apache.hadoop.ozone.client.io.KeyDataStreamOutput;
-import org.apache.hadoop.ozone.client.io.KeyOutputStream;
-import org.apache.hadoop.ozone.client.io.OzoneDataStreamOutput;
 import org.apache.hadoop.util.StringUtils;
 
 import java.io.OutputStream;
 
-
+/**
+ * This class is used to workaround Hadoop2 compatibility issues.
+ *
+ * Hadoop 2 does not support StreamCapabilities, so we create different modules
+ * for Hadoop2 and Hadoop3 profiles.
+ *
+ * The OzoneFileSystem and RootedOzoneFileSystem in Hadoop3 profile uses
+ * CapableOzoneFSDataStreamOutput which implements StreamCapabilities interface,
+ * whereas the ones in Hadoop2 profile does not.
+ */
 public class CapableOzoneFSDataStreamOutput extends OzoneFSDataStreamOutput
     implements StreamCapabilities {
   private final boolean isHsyncEnabled;
@@ -41,16 +44,11 @@ public class CapableOzoneFSDataStreamOutput extends OzoneFSDataStreamOutput
 
   @Override
   public boolean hasCapability(String capability) {
-    ByteBufferStreamOutput os = getByteBufferStreamOutput();
-
-    /* if (os instanceof CryptoOutputStream) {
-      ByteBufferStreamOutput wrapped = ((CryptoOutputStream) os).getWrappedStream();
-      return hasWrappedCapability(wrapped, capability);
-    } */
+    OutputStream os = (OutputStream) getByteBufferStreamOutput();
     return hasWrappedCapability(os, capability);
   }
 
-  private boolean hasWrappedCapability(ByteBufferStreamOutput os,
+  private boolean hasWrappedCapability(OutputStream os,
       String capability) {
 
     if (os instanceof KeyDataStreamOutput) {

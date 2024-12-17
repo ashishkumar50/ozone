@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.client.io;
 
+import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.ratis.util.function.CheckedFunction;
 
@@ -37,7 +38,7 @@ import java.util.Objects;
  * @param <OUT> The underlying {@link OutputStream} type.
  */
 public class SelectorOutputStream<OUT extends OutputStream>
-    extends OutputStream implements Syncable {
+    extends OutputStream implements Syncable, StreamCapabilities {
   /** A buffer backed by a byte[]. */
   static final class ByteArrayBuffer {
     private byte[] array;
@@ -185,5 +186,19 @@ public class SelectorOutputStream<OUT extends OutputStream>
   @Override
   public void close() throws IOException {
     select().close();
+  }
+
+  @Override
+  public boolean hasCapability(String capability) {
+    try {
+      final OUT out = select();
+      if (out instanceof StreamCapabilities) {
+        return ((StreamCapabilities) out).hasCapability(capability);
+      } else {
+        return false;
+      }
+    } catch (Exception e) {
+      return false;
+    }
   }
 }

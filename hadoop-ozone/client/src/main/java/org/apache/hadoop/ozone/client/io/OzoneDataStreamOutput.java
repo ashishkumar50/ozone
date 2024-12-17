@@ -47,8 +47,8 @@ public class OzoneDataStreamOutput extends ByteBufferOutputStream
   public OzoneDataStreamOutput(Syncable outputStream, boolean enableHsync) {
     this(Optional.of(Objects.requireNonNull(outputStream,
                 "outputStream == null"))
-            .filter(s -> s instanceof OzoneDataStreamOutput)
-            .map(s -> (OzoneDataStreamOutput)s)
+            .filter(s -> s instanceof OutputStream)
+            .map(s -> (OutputStream)s)
             .orElseThrow(() -> new IllegalArgumentException(
                 "The parameter syncable is not an OutputStream")),
         outputStream, enableHsync);
@@ -58,12 +58,12 @@ public class OzoneDataStreamOutput extends ByteBufferOutputStream
    * Constructs an instance with a (non-{@link Syncable}) {@link OutputStream}
    * with an optional {@link Syncable} object.
    *
-   * @param byteBufferStreamOutput for writing data.
+   * @param outputStream for writing data.
    * @param syncable an optional parameter
    *                 for accessing the {@link Syncable} feature.
    */
-  public OzoneDataStreamOutput(ByteBufferStreamOutput byteBufferStreamOutput, Syncable syncable) {
-    this(byteBufferStreamOutput, syncable, false);
+  public OzoneDataStreamOutput(OutputStream outputStream, Syncable syncable) {
+    this(outputStream, syncable, false);
   }
 
   /**
@@ -75,12 +75,13 @@ public class OzoneDataStreamOutput extends ByteBufferOutputStream
    *                 for accessing the {@link Syncable} feature.
    * @param enableHsync if false, hsync() executes flush() instead.
    */
-  public OzoneDataStreamOutput(ByteBufferStreamOutput byteBufferStreamOutput, Syncable syncable,
+  public OzoneDataStreamOutput(OutputStream outputStream, Syncable syncable,
                            boolean enableHsync) {
-    this.byteBufferStreamOutput = Objects.requireNonNull(byteBufferStreamOutput,
-        "byteBufferStreamOutput == null");
+    this.byteBufferStreamOutput = outputStream != null ? outputStream instanceof ByteBufferStreamOutput ?
+        (ByteBufferStreamOutput) outputStream
+        : null : null;
     this.syncable = syncable != null ? syncable
-        : byteBufferStreamOutput instanceof Syncable ? (Syncable) byteBufferStreamOutput
+        : outputStream instanceof Syncable ? (Syncable) outputStream
         : null;
     this.enableHsync = enableHsync;
   }
@@ -134,6 +135,10 @@ public class OzoneDataStreamOutput extends ByteBufferOutputStream
     }
     // Otherwise return null.
     return null;
+  }
+
+  public void hflush() throws IOException {
+    hsync();
   }
 
   public void hsync() throws IOException {

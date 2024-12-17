@@ -738,6 +738,11 @@ public final class OzoneBucketStub extends OzoneBucket {
     }
 
     @Override
+    public void hflush() throws IOException {
+
+    }
+
+    @Override
     public void hsync() throws IOException {
 
     }

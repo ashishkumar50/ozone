@@ -17,11 +17,9 @@
  */
 package org.apache.hadoop.fs.ozone;
 
-import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.hdds.scm.storage.ByteBufferStreamOutput;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.client.io.ByteBufferOutputStream;
-import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -29,7 +27,7 @@ import java.nio.ByteBuffer;
 /**
  * The ByteBuffer output stream for Ozone file system.
  */
-public class OzoneFSDataStreamOutput extends ByteBufferOutputStream implements Syncable {
+public class OzoneFSDataStreamOutput extends ByteBufferOutputStream {
 
   private final ByteBufferStreamOutput byteBufferStreamOutput;
 
