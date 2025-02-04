@@ -482,7 +482,7 @@ public class MutableVolumeSet implements VolumeSet {
             rootDir = volumeInfo.get().getRootDir();
             SpaceUsageSource usage = volumeInfo.get().getCurrentUsage();
             scmUsed = usage.getUsedSpace();
-            remaining = usage.getAvailable();
+            remaining = volume.getStorageState() == HddsVolume.VolumeState.READ_ONLY ? 0 : usage.getAvailable();
             capacity = usage.getCapacity();
             committed = (volume instanceof HddsVolume) ?
                 ((HddsVolume) volume).getCommittedBytes() : 0;

@@ -43,6 +43,11 @@ public final class DiskCheckUtil {
   // to inject failures.
   private static DiskChecks impl = new DiskChecksImpl();
 
+  /** Enum for disk read/write status during volume check. */
+  public enum ReadWriteStatus {
+    WRITE_FAIL, READ_FAIL, READ_WRITE_OK
+  }
+
   @VisibleForTesting
   public static void setTestImpl(DiskChecks diskChecks) {
     impl = diskChecks;
@@ -61,7 +66,7 @@ public final class DiskCheckUtil {
     return impl.checkPermissions(storageDir);
   }
 
-  public static boolean checkReadWrite(File storageDir, File testFileDir,
+  public static ReadWriteStatus checkReadWrite(File storageDir, File testFileDir,
       int numBytesToWrite) {
     return impl.checkReadWrite(storageDir, testFileDir, numBytesToWrite);
   }
@@ -78,9 +83,9 @@ public final class DiskCheckUtil {
     default boolean checkPermissions(File storageDir) {
       return true;
     }
-    default boolean checkReadWrite(File storageDir, File testFileDir,
-                            int numBytesToWrite) {
-      return true;
+    default ReadWriteStatus checkReadWrite(File storageDir, File testFileDir,
+                                           int numBytesToWrite) {
+      return ReadWriteStatus.READ_WRITE_OK;
     }
   }
 
@@ -129,8 +134,7 @@ public final class DiskCheckUtil {
     }
 
     @Override
-    public boolean checkReadWrite(File storageDir,
-        File testFileDir, int numBytesToWrite) {
+    public ReadWriteStatus checkReadWrite(File storageDir, File testFileDir, int numBytesToWrite) {
       File testFile = new File(testFileDir, "disk-check-" + UUID.randomUUID());
       byte[] writtenBytes = new byte[numBytesToWrite];
       RANDOM.nextBytes(writtenBytes);
@@ -140,15 +144,15 @@ public final class DiskCheckUtil {
       } catch (FileNotFoundException notFoundEx) {
         logError(storageDir, String.format("Could not find file %s for " +
             "volume check.", testFile.getAbsolutePath()), notFoundEx);
-        return false;
+        return ReadWriteStatus.WRITE_FAIL;
       } catch (SyncFailedException syncEx) {
         logError(storageDir, String.format("Could sync file %s to disk.",
             testFile.getAbsolutePath()), syncEx);
-        return false;
+        return ReadWriteStatus.WRITE_FAIL;
       } catch (IOException ioEx) {
         logError(storageDir, String.format("Could not write file %s " +
             "for volume check.", testFile.getAbsolutePath()), ioEx);
-        return false;
+        return ReadWriteStatus.WRITE_FAIL;
       }
 
       // Read data back from the test file.
@@ -159,16 +163,16 @@ public final class DiskCheckUtil {
           logError(storageDir, String.format("%d bytes written to file %s " +
                   "but %d bytes were read back.", numBytesToWrite,
               testFile.getAbsolutePath(), numBytesRead));
-          return false;
+          return ReadWriteStatus.READ_FAIL;
         }
       } catch (FileNotFoundException notFoundEx) {
         logError(storageDir, String.format("Could not find file %s " +
             "for volume check.", testFile.getAbsolutePath()), notFoundEx);
-        return false;
+        return ReadWriteStatus.READ_FAIL;
       } catch (IOException ioEx) {
         logError(storageDir, String.format("Could not read file %s " +
             "for volume check.", testFile.getAbsolutePath()), ioEx);
-        return false;
+        return ReadWriteStatus.READ_FAIL;
       }
 
       // Check that test file has the expected content.
@@ -176,18 +180,18 @@ public final class DiskCheckUtil {
         logError(storageDir, String.format("%d Bytes read from file " +
                 "%s do not match the %d bytes that were written.",
             writtenBytes.length, testFile.getAbsolutePath(), readBytes.length));
-        return false;
+        return ReadWriteStatus.READ_FAIL;
       }
 
       // Delete the file.
       if (!testFile.delete()) {
         logError(storageDir, String.format("Could not delete file %s " +
             "for volume check.", testFile.getAbsolutePath()));
-        return false;
+        return ReadWriteStatus.WRITE_FAIL;
       }
 
       // If all checks passed, the volume is healthy.
-      return true;
+      return ReadWriteStatus.READ_WRITE_OK;
     }
 
     private void logError(File storageDir, String message) {

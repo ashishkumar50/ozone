@@ -25,6 +25,7 @@ import java.io.File;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -74,7 +75,8 @@ public class TestDiskCheckUtil {
 
   @Test
   public void testReadWrite() {
-    assertTrue(DiskCheckUtil.checkReadWrite(testDir, testDir, 10));
+    assertSame(DiskCheckUtil.checkReadWrite(testDir, testDir, 10),
+        DiskCheckUtil.ReadWriteStatus.READ_WRITE_OK);
 
     // Test file should have been deleted.
     File[] children = testDir.listFiles();
