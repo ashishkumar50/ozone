@@ -124,8 +124,8 @@ public class TestStorageVolumeHealthChecks {
     final DiskCheckUtil.DiskChecks noPermissions =
         new DiskCheckUtil.DiskChecks() {
           @Override
-          public boolean checkPermissions(File storageDir) {
-            return false;
+          public DiskCheckUtil.ReadWriteStatus checkPermissions(File storageDir) {
+            return DiskCheckUtil.ReadWriteStatus.READ_FAIL;
           }
         };
 
@@ -328,9 +328,9 @@ public class TestStorageVolumeHealthChecks {
     }
 
     @Override
-    public boolean checkPermissions(File storageDir) {
+    public DiskCheckUtil.ReadWriteStatus checkPermissions(File storageDir) {
       assertEquals(volume.getStorageDir(), storageDir);
-      return true;
+      return DiskCheckUtil.ReadWriteStatus.READ_WRITE_OK;
     }
 
     @Override

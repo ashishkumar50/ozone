@@ -45,21 +45,21 @@ public class TestDiskCheckUtil {
     assertTrue(testDir.canRead());
     assertTrue(testDir.canWrite());
     assertTrue(testDir.canExecute());
-    assertTrue(DiskCheckUtil.checkPermissions(testDir));
+    assertSame(DiskCheckUtil.checkPermissions(testDir), DiskCheckUtil.ReadWriteStatus.READ_WRITE_OK);
 
     // Test failure without read permissiosns.
     assertTrue(testDir.setReadable(false));
-    assertFalse(DiskCheckUtil.checkPermissions(testDir));
+    assertSame(DiskCheckUtil.checkPermissions(testDir), DiskCheckUtil.ReadWriteStatus.READ_FAIL);
     assertTrue(testDir.setReadable(true));
 
     // Test failure without write permissiosns.
     assertTrue(testDir.setWritable(false));
-    assertFalse(DiskCheckUtil.checkPermissions(testDir));
+    assertSame(DiskCheckUtil.checkPermissions(testDir), DiskCheckUtil.ReadWriteStatus.WRITE_FAIL);
     assertTrue(testDir.setWritable(true));
 
     // Test failure without execute permissiosns.
     assertTrue(testDir.setExecutable(false));
-    assertFalse(DiskCheckUtil.checkPermissions(testDir));
+    assertSame(DiskCheckUtil.checkPermissions(testDir), DiskCheckUtil.ReadWriteStatus.READ_FAIL);
     assertTrue(testDir.setExecutable(true));
   }
 

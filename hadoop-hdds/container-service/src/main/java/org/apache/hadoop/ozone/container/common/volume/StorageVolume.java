@@ -600,12 +600,13 @@ public abstract class StorageVolume
   @Override
   public synchronized VolumeCheckResult check(@Nullable Boolean unused)
       throws Exception {
+
+    DiskCheckUtil.ReadWriteStatus readWriteStatus = DiskCheckUtil.checkPermissions(storageDir);
     boolean directoryChecksPassed =
-        DiskCheckUtil.checkExistence(storageDir) &&
-        DiskCheckUtil.checkPermissions(storageDir);
+        DiskCheckUtil.checkExistence(storageDir);
     // If the directory is not present or has incorrect permissions, fail the
     // volume immediately. This is not an intermittent error.
-    if (!directoryChecksPassed) {
+    if (!directoryChecksPassed || readWriteStatus == DiskCheckUtil.ReadWriteStatus.READ_FAIL) {
       if (Thread.currentThread().isInterrupted()) {
         throw new InterruptedException("Directory check of volume " + this +
             " interrupted.");
@@ -613,12 +614,17 @@ public abstract class StorageVolume
       return VolumeCheckResult.FAILED;
     }
 
+    if (readWriteStatus == DiskCheckUtil.ReadWriteStatus.WRITE_FAIL) {
+      setState(VolumeState.READ_ONLY);
+      return VolumeCheckResult.HEALTHY;
+    }
+
     // If IO test count is set to 0, IO tests for disk health are disabled.
     if (ioTestCount == 0) {
       return VolumeCheckResult.HEALTHY;
     }
 
-    DiskCheckUtil.ReadWriteStatus readWriteStatus = DiskCheckUtil.checkReadWrite(storageDir,
+    readWriteStatus = DiskCheckUtil.checkReadWrite(storageDir,
         diskCheckDir, healthCheckFileSize);
     if (readWriteStatus == DiskCheckUtil.ReadWriteStatus.WRITE_FAIL) {
       // Mark volume as READ only
