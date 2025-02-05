@@ -114,7 +114,6 @@ public final class DiskCheckUtil {
       // Check all permissions on the volume. If there are multiple permission
       // errors, count it as one failure so the admin can fix them all at once.
       ReadWriteStatus readWriteStatus = ReadWriteStatus.READ_WRITE_OK;
-      boolean permissionsCorrect = true;
       if (!storageDir.canRead()) {
         logError(storageDir,
             "Datanode does not have read permission on volume.");
