@@ -51,7 +51,6 @@ import org.slf4j.LoggerFactory;
  */
 public final class MetricsAsserts {
   // workaround for HADOOP-19301.
-  private static final MutableQuantiles QUANTILES = new MutableQuantiles();
   private static final Logger LOG = LoggerFactory.getLogger(MetricsAsserts.class);
   private static final Offset<Double> EPSILON = Offset.offset(0.00001);
   private static final Offset<Float> EPSILON_FLOAT = Offset.offset(0.00001f);
