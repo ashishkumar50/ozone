@@ -411,7 +411,7 @@ public final class MetricsAsserts {
   public static void assertQuantileGauges(String prefix,
       MetricsRecordBuilder rb, String valueName) {
     verify(rb).addGauge(eqName(info(prefix + "NumOps", "")), geq(0L));
-    for (Quantile q : QUANTILES.getQuantiles()) {
+    for (Quantile q : MutableQuantiles.quantiles) {
       String nameTemplate = prefix + "%dthPercentile" + valueName;
       int percentile = (int) (100 * q.quantile);
       verify(rb).addGauge(
@@ -432,7 +432,7 @@ public final class MetricsAsserts {
   public static void assertInverseQuantileGauges(String prefix,
       MetricsRecordBuilder rb, String valueName) {
     verify(rb).addGauge(eqName(info(prefix + "NumOps", "")), geq(0L));
-    for (Quantile q : QUANTILES.getQuantiles()) {
+    for (Quantile q : MutableQuantiles.quantiles) {
       String nameTemplate = prefix + "%dthInversePercentile" + valueName;
       int percentile = (int) (100 * q.quantile);
       verify(rb).addGauge(
