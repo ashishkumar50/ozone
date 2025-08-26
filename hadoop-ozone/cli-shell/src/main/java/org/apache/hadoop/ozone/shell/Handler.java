@@ -83,7 +83,7 @@ public abstract class Handler extends AbstractSubcommand implements Callable<Voi
     boolean enabled = OzoneSecurityUtil.isSecurityEnabled(conf);
     if (!enabled) {
       err().printf("Error: '%s' operation works only when security is " +
-          "enabled. To enable security set ozone.security.enabled to " +
+          "enabled. To enable security use set ozone.security.enabled to " +
           "true.%n", spec().qualifiedName().trim());
     }
     return enabled;
