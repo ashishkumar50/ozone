@@ -403,6 +403,8 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
             blockDeleteMetrics.incrProcessedTransactionFailCount(1);
           }
         }
+        LOG.info("Sending deletion ACK to SCM, successTransactionCount = {}," +
+            "failedTransactionCount= {}", successCount, failedCount);
       }
       cmdExecuted = true;
     } finally {
