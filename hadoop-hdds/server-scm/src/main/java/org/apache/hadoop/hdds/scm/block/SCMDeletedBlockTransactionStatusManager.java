@@ -34,6 +34,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -89,7 +90,7 @@ public class SCMDeletedBlockTransactionStatusManager {
     this.transactionToDNsCommitMap = new ConcurrentHashMap<>();
     this.transactionToRetryCountMap = new ConcurrentHashMap<>();
     this.scmDeleteBlocksCommandStatusManager =
-        new SCMDeleteBlocksCommandStatusManager();
+        new SCMDeleteBlocksCommandStatusManager(metrics);
   }
 
   /**
@@ -104,8 +105,11 @@ public class SCMDeletedBlockTransactionStatusManager {
     private static final CmdStatus DEFAULT_STATUS = TO_BE_SENT;
     private static final Set<CmdStatus> STATUSES_REQUIRING_TIMEOUT = Collections.singleton(SENT);
 
-    public SCMDeleteBlocksCommandStatusManager() {
+    private ScmBlockDeletingServiceMetrics metrics;
+
+    public SCMDeleteBlocksCommandStatusManager(ScmBlockDeletingServiceMetrics metrics) {
       this.scmCmdStatusRecord = new ConcurrentHashMap<>();
+      this.metrics = metrics;
     }
 
     /**
@@ -314,6 +318,7 @@ public class SCMDeletedBlockTransactionStatusManager {
         if (updateTime != null &&
             Duration.between(updateTime, now).toMillis() > timeoutMs) {
           CmdStatusData state = removeScmCommand(dnId, scmCmdId);
+          metrics.incrDNCommandsTimeout(dnId, 1);
           LOG.warn("SCM BlockDeletionCommand {} for Datanode: {} was removed after {}ms without update",
               state, dnId, timeoutMs);
         }
@@ -361,37 +366,10 @@ public class SCMDeletedBlockTransactionStatusManager {
     }
   }
 
-  public void incrementRetryCount(List<Long> txIDs, long maxRetry)
-      throws IOException {
-    ArrayList<Long> txIDsToUpdate = new ArrayList<>();
-    for (Long txID : txIDs) {
-      int currentCount =
-          transactionToRetryCountMap.getOrDefault(txID, 0);
-      if (currentCount > maxRetry) {
-        continue;
-      } else {
-        currentCount += 1;
-        if (currentCount > maxRetry) {
-          txIDsToUpdate.add(txID);
-        }
-        transactionToRetryCountMap.put(txID, currentCount);
-      }
-    }
-
-    if (!txIDsToUpdate.isEmpty()) {
-      deletedBlockLogStateManager
-          .increaseRetryCountOfTransactionInDB(txIDsToUpdate);
-    }
-  }
-
-  public void resetRetryCount(List<Long> txIDs) throws IOException {
-    for (Long txID: txIDs) {
-      transactionToRetryCountMap.computeIfPresent(txID, (key, value) -> 0);
-    }
-  }
-
-  int getRetryCount(long txID) {
-    return transactionToRetryCountMap.getOrDefault(txID, 0);
+  public void incrementRetryCount(List<Long> txIDs) {
+    CompletableFuture.runAsync(() ->
+        txIDs.forEach(tx ->
+            transactionToRetryCountMap.compute(tx, (k, v) -> (v == null) ? 1 : v + 1)));
   }
 
   public void onSent(DatanodeDetails dnId, SCMCommand<?> scmCommand) {
@@ -451,11 +429,11 @@ public class SCMDeletedBlockTransactionStatusManager {
     for (DeleteBlockTransactionResult transactionResult :
         transactionResults) {
       if (isTransactionFailed(transactionResult)) {
-        metrics.incrBlockDeletionTransactionFailure();
+        metrics.incrBlockDeletionTransactionFailureOnDatanodes();
         continue;
       }
       try {
-        metrics.incrBlockDeletionTransactionSuccess();
+        metrics.incrBlockDeletionTransactionSuccessOnDatanodes();
         long txID = transactionResult.getTxID();
         // set of dns which have successfully committed transaction txId.
         final Set<DatanodeID> dnsWithCommittedTxn = transactionToDNsCommitMap.get(txID);

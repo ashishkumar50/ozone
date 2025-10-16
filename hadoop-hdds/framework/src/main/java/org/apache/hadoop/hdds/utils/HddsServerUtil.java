@@ -58,10 +58,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -617,14 +617,12 @@ public final class HddsServerUtil {
    * @param checkpoint    checkpoint file
    * @param destination   destination output stream.
    * @param toExcludeList the files to be excluded
-   * @param excludedList  the files excluded
    * @throws IOException
    */
   public static void writeDBCheckpointToStream(
       DBCheckpoint checkpoint,
       OutputStream destination,
-      List<String> toExcludeList,
-      List<String> excludedList)
+      Set<String> toExcludeList)
       throws IOException {
     try (ArchiveOutputStream<TarArchiveEntry> archiveOutputStream = tar(destination);
         Stream<Path> files =
@@ -636,8 +634,6 @@ public final class HddsServerUtil {
             String fileName = fileNamePath.toString();
             if (!toExcludeList.contains(fileName)) {
               includeFile(path.toFile(), fileName, archiveOutputStream);
-            } else {
-              excludedList.add(fileName);
             }
           }
         }
@@ -680,7 +676,7 @@ public final class HddsServerUtil {
     final String className = clazz.getSimpleName();
 
     if (log.isInfoEnabled()) {
-      log.info(createStartupShutdownMessage(versionInfo, className, hostname,
+      log.info(createStartupMessage(versionInfo, className, hostname,
           args, HddsUtils.processForLogging(conf)));
     }
 
@@ -720,19 +716,18 @@ public final class HddsServerUtil {
    * @param args Command arguments
    * @return a string to log.
    */
-  public static String createStartupShutdownMessage(VersionInfo versionInfo,
+  private static String createStartupMessage(VersionInfo versionInfo,
       String className, String hostname, String[] args,
       Map<String, String> conf) {
     return toStartupShutdownString("STARTUP_MSG: ",
         "Starting " + className,
-        "  host = " + hostname,
-        "  args = " + (args != null ? Arrays.asList(args) : new ArrayList<>()),
-        "  version = " + versionInfo.getVersion(),
+        "       host = " + hostname,
+        "    version = " + versionInfo.getVersion(),
+        "      build = " + versionInfo.getUrl() + "/" + versionInfo.getRevision(),
+        "       java = " + System.getProperty("java.version"),
+        "       args = " + (args != null ? Arrays.asList(args) : new ArrayList<>()),
         "  classpath = " + System.getProperty("java.class.path"),
-        "  build = " + versionInfo.getUrl() + "/"
-            + versionInfo.getRevision(),
-        "  java = " + System.getProperty("java.version"),
-        "  conf = " + conf);
+        "       conf = " + conf);
   }
 
 }

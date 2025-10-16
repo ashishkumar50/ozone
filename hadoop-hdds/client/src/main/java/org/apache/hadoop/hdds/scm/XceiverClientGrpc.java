@@ -21,9 +21,6 @@ import static org.apache.hadoop.hdds.HddsUtils.processForDebug;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import io.opentracing.Scope;
-import io.opentracing.Span;
-import io.opentracing.util.GlobalTracer;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -38,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.ConfigurationSource;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -184,8 +182,13 @@ public class XceiverClientGrpc extends XceiverClientSpi {
 
   protected NettyChannelBuilder createChannel(DatanodeDetails dn, int port)
       throws IOException {
-    NettyChannelBuilder channelBuilder =
-        NettyChannelBuilder.forAddress(dn.getIpAddress(), port).usePlaintext()
+    String dnHost;
+    if (datanodeUseHostName()) {
+      dnHost = dn.getHostName();
+    } else {
+      dnHost = dn.getIpAddress();
+    }
+    NettyChannelBuilder channelBuilder = NettyChannelBuilder.forAddress(dnHost, port)
             .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
             .proxyDetector(uri -> null)
             .intercept(new GrpcClientInterceptor());
@@ -203,6 +206,12 @@ public class XceiverClientGrpc extends XceiverClientSpi {
       channelBuilder.usePlaintext();
     }
     return channelBuilder;
+  }
+
+  private boolean datanodeUseHostName() {
+    return config.getBoolean(
+            HddsConfigKeys.HDDS_DATANODE_USE_DN_HOSTNAME,
+            HddsConfigKeys.HDDS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
   }
 
   /**
@@ -524,10 +533,8 @@ public class XceiverClientGrpc extends XceiverClientSpi {
       ContainerCommandRequestProto request)
       throws IOException, ExecutionException, InterruptedException {
 
-    Span span = GlobalTracer.get()
-        .buildSpan("XceiverClientGrpc." + request.getCmdType().name()).start();
-
-    try (Scope ignored = GlobalTracer.get().activateSpan(span)) {
+    try (TracingUtil.TraceCloseable ignored = TracingUtil.createActivatedSpan(
+        "XceiverClientGrpc." + request.getCmdType().name())) {
 
       ContainerCommandRequestProto.Builder builder =
           ContainerCommandRequestProto.newBuilder(request)
@@ -541,9 +548,6 @@ public class XceiverClientGrpc extends XceiverClientSpi {
         asyncReply.getResponse().get();
       }
       return asyncReply;
-
-    } finally {
-      span.finish();
     }
   }
 
@@ -570,7 +574,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     DatanodeID dnId = dn.getID();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Send command {} to datanode {}",
-          request.getCmdType(), dn.getIpAddress());
+          request.getCmdType(), dn);
     }
     final CompletableFuture<ContainerCommandResponseProto> replyFuture =
         new CompletableFuture<>();

@@ -49,7 +49,6 @@ import org.apache.hadoop.ozone.om.lock.OMLockDetails;
 import org.apache.hadoop.ozone.om.protocolPB.grpc.GrpcClientConstants;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
-import org.apache.hadoop.ozone.om.snapshot.ReferenceCounted;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.LayoutVersion;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
@@ -60,6 +59,7 @@ import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.ratis.util.function.UncheckedAutoCloseableSupplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +69,7 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class OMClientRequest implements RequestAuditor {
 
-  private static final Logger LOG =
+  protected static final Logger LOG =
       LoggerFactory.getLogger(OMClientRequest.class);
 
   private OMRequest omRequest;
@@ -134,8 +134,12 @@ public abstract class OMClientRequest implements RequestAuditor {
    * Validate the OMRequest and update the cache.
    * This step should verify that the request can be executed, perform
    * any authorization steps and update the in-memory cache.
-
+   *
    * This step does not persist the changes to the database.
+   *
+   * To coders and reviewers, CAUTION: Do NOT bring external dependencies into this method, doing so could potentially
+   * cause divergence in OM DB states in HA. If you have to, be extremely careful.
+   * e.g. Do NOT invoke ACL check inside validateAndUpdateCache, which can use Ranger plugin that relies on external DB.
    *
    * @return the response that will be returned to the client.
    */
@@ -300,7 +304,7 @@ public abstract class OMClientRequest implements RequestAuditor {
         contextBuilder.setOwnerName(bucketOwner);
       }
 
-      try (ReferenceCounted<IOmMetadataReader> rcMetadataReader =
+      try (UncheckedAutoCloseableSupplier<IOmMetadataReader> rcMetadataReader =
           ozoneManager.getOmMetadataReader()) {
         OmMetadataReader omMetadataReader =
             (OmMetadataReader) rcMetadataReader.get();
@@ -366,7 +370,7 @@ public abstract class OMClientRequest implements RequestAuditor {
       String bucketOwner)
       throws IOException {
 
-    try (ReferenceCounted<IOmMetadataReader> rcMetadataReader =
+    try (UncheckedAutoCloseableSupplier<IOmMetadataReader> rcMetadataReader =
         ozoneManager.getOmMetadataReader()) {
       OzoneAclUtils.checkAllAcls((OmMetadataReader) rcMetadataReader.get(),
           resType, storeType, aclType,
@@ -521,6 +525,20 @@ public abstract class OMClientRequest implements RequestAuditor {
     }
   }
 
+  /**
+   * Normalizes the key path based on the bucket layout.  This should be used for existing keys. 
+   * For new key creation, please see {@link #validateAndNormalizeKey(boolean, String, BucketLayout)}
+   *
+   * @return normalized key path
+   */
+  public static String normalizeKeyPath(boolean enableFileSystemPaths,
+      String keyPath, BucketLayout bucketLayout) throws OMException {
+    if (bucketLayout.shouldNormalizePaths(enableFileSystemPaths)) {
+      keyPath = OmUtils.normalizeKey(keyPath, false);
+    }
+    return keyPath;
+  }
+  
   public static String validateAndNormalizeKey(boolean enableFileSystemPaths,
       String keyPath, BucketLayout bucketLayout) throws OMException {
     LOG.debug("Bucket Layout: {}", bucketLayout);

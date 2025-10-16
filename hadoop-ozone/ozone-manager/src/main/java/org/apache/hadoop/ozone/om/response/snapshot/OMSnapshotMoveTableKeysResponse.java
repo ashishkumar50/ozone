@@ -35,9 +35,9 @@ import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
-import org.apache.hadoop.ozone.om.snapshot.ReferenceCounted;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SnapshotMoveKeyInfos;
+import org.apache.ratis.util.function.UncheckedAutoCloseableSupplier;
 
 /**
  * Response for OMSnapshotMoveDeletedKeysRequest.
@@ -45,6 +45,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Snapsho
 @CleanupTableInfo(cleanupTables = {SNAPSHOT_INFO_TABLE})
 public class OMSnapshotMoveTableKeysResponse extends OMClientResponse {
 
+  private long bucketId;
   private SnapshotInfo fromSnapshot;
   private SnapshotInfo nextSnapshot;
   private List<SnapshotMoveKeyInfos> deletedKeys;
@@ -53,6 +54,7 @@ public class OMSnapshotMoveTableKeysResponse extends OMClientResponse {
 
   public OMSnapshotMoveTableKeysResponse(OMResponse omResponse,
                                          @Nonnull SnapshotInfo fromSnapshot, SnapshotInfo nextSnapshot,
+                                         long bucketId,
                                          List<SnapshotMoveKeyInfos> deletedKeys,
                                          List<SnapshotMoveKeyInfos> deletedDirs,
                                          List<HddsProtos.KeyValue> renamedKeys) {
@@ -62,6 +64,7 @@ public class OMSnapshotMoveTableKeysResponse extends OMClientResponse {
     this.deletedKeys = deletedKeys;
     this.renameKeysList = renamedKeys;
     this.deletedDirs = deletedDirs;
+    this.bucketId = bucketId;
   }
 
   /**
@@ -78,13 +81,13 @@ public class OMSnapshotMoveTableKeysResponse extends OMClientResponse {
     OmSnapshotManager omSnapshotManager = ((OmMetadataManagerImpl) omMetadataManager)
         .getOzoneManager().getOmSnapshotManager();
 
-    try (ReferenceCounted<OmSnapshot> rcOmFromSnapshot =
+    try (UncheckedAutoCloseableSupplier<OmSnapshot> rcOmFromSnapshot =
              omSnapshotManager.getSnapshot(fromSnapshot.getSnapshotId())) {
 
       OmSnapshot fromOmSnapshot = rcOmFromSnapshot.get();
 
       if (nextSnapshot != null) {
-        try (ReferenceCounted<OmSnapshot>
+        try (UncheckedAutoCloseableSupplier<OmSnapshot>
             rcOmNextSnapshot = omSnapshotManager.getSnapshot(nextSnapshot.getSnapshotId())) {
 
           OmSnapshot nextOmSnapshot = rcOmNextSnapshot.get();
@@ -146,7 +149,7 @@ public class OMSnapshotMoveTableKeysResponse extends OMClientResponse {
     }
     // Add deleted keys to the next snapshot or active DB.
     for (SnapshotMoveKeyInfos deletedKeyInfo : deletedKeys) {
-      RepeatedOmKeyInfo omKeyInfos = createMergedRepeatedOmKeyInfoFromDeletedTableEntry(deletedKeyInfo,
+      RepeatedOmKeyInfo omKeyInfos = createMergedRepeatedOmKeyInfoFromDeletedTableEntry(deletedKeyInfo, bucketId,
           metadataManager);
       metadataManager.getDeletedTable().putWithBatch(batchOp, deletedKeyInfo.getKey(), omKeyInfos);
     }

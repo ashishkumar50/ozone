@@ -39,7 +39,6 @@ import org.apache.hadoop.hdds.protocol.SecretKeyProtocolScm;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerDataProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ReadContainerResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DeletedBlocksTransactionInfo;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ContainerBalancerStatusInfoResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.DecommissionScmResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StartContainerBalancerResponseProto;
@@ -201,13 +200,18 @@ public class ContainerOperationClient implements ScmClient {
   @Override
   public ContainerWithPipeline createContainer(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor factor, String owner) throws IOException {
+    ReplicationConfig replicationConfig =
+        ReplicationConfig.fromProtoTypeAndFactor(replicationType, factor);
+    return createContainer(replicationConfig, owner);
+  }
+
+  @Override
+  public ContainerWithPipeline createContainer(ReplicationConfig replicationConfig, String owner) throws IOException {
     XceiverClientSpi client = null;
     XceiverClientManager clientManager = getXceiverClientManager();
     try {
-      // allocate container on SCM.
-      ContainerWithPipeline containerWithPipeline =
-          storageContainerLocationClient.allocateContainer(type, factor,
-              owner);
+      ContainerWithPipeline containerWithPipeline = 
+          storageContainerLocationClient.allocateContainer(replicationConfig, owner);
       Pipeline pipeline = containerWithPipeline.getPipeline();
       // connect to pipeline leader and allocate container on leader datanode.
       client = clientManager.acquireClient(pipeline);
@@ -547,18 +551,6 @@ public class ContainerOperationClient implements ScmClient {
   }
 
   @Override
-  public List<DeletedBlocksTransactionInfo> getFailedDeletedBlockTxn(int count,
-      long startTxId) throws IOException {
-    return storageContainerLocationClient.getFailedDeletedBlockTxn(count,
-        startTxId);
-  }
-
-  @Override
-  public int resetDeletedBlockRetryCount(List<Long> txIDs) throws IOException {
-    return storageContainerLocationClient.resetDeletedBlockRetryCount(txIDs);
-  }
-
-  @Override
   public List<HddsProtos.DatanodeUsageInfoProto> getDatanodeUsageInfo(
       String address, String uuid) throws IOException {
     return storageContainerLocationClient.getDatanodeUsageInfo(address,
@@ -598,4 +590,8 @@ public class ContainerOperationClient implements ScmClient {
     return storageContainerLocationClient.getMetrics(query);
   }
 
+  @Override
+  public void reconcileContainer(long id) throws IOException {
+    storageContainerLocationClient.reconcileContainer(id);
+  }
 }
